@@ -1,0 +1,23 @@
+// model Movie {
+//   id           String   @id @default(uuid())
+//   title        String
+//   description  String
+//   genre        String[]
+//   releaseYear  Int      @map("release_year")
+//   director     String
+//   cast         String[]
+//   platform     String
+
+//   pricing      PricingType
+//   price        Float?
+//   youtubeLink  String?  @map("youtube_link")
+
+//   createdAt    DateTime @default(now()) @map("created_at")
+
+//   reviews      Review[]
+//   watchlists   Watchlist[]
+
+//   @@index([title])
+//   @@index([releaseYear])
+//   @@map("movies")
+// }

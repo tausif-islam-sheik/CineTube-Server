@@ -1,0 +1,20 @@
+enum Role {
+    USER
+    ADMIN
+}
+
+enum PricingType {
+    FREE
+    PREMIUM
+}
+
+enum ReviewStatus {
+    PENDING
+    APPROVED
+    REJECTED
+}
+
+enum UserStatus {
+    ACTIVE
+    BLOCKED
+}

@@ -1,0 +1,14 @@
+// model Payment {
+//   id        String   @id @default(uuid())
+
+//   userId    String   @map("user_id")
+//   amount    Float
+//   status    String
+
+//   createdAt DateTime @default(now()) @map("created_at")
+
+//   user      User     @relation(fields: [userId], references: [id])
+
+//   @@index([userId])
+//   @@map("payments")
+// }
