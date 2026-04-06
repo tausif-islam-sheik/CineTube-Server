@@ -1,23 +1,23 @@
-// model Review {
-//   id        String       @id @default(uuid())
-//   rating    Int
-//   content   String
-//   tags      String[]
-//   spoiler   Boolean      @default(false)
-//   status    ReviewStatus @default(PENDING)
+model Review {
+  id        String       @id @default(uuid())
+  rating    Int
+  content   String
+  tags      String[]
+  spoiler   Boolean      @default(false)
+  status    ReviewStatus @default(PENDING)
 
-//   userId    String @map("user_id")
-//   movieId   String @map("movie_id")
+  userId    String @map("user_id")
+  movieId   String @map("movie_id")
 
-//   createdAt DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
-//   user      User  @relation(fields: [userId], references: [id])
-//   movie     Movie @relation(fields: [movieId], references: [id])
+  user      User  @relation(fields: [userId], references: [id])
+  movie     Movie @relation(fields: [movieId], references: [id])
 
-//   likes     Like[]
-//   comments  Comment[]
+  likes     Like[]
+  comments  Comment[]
 
-//   @@index([userId])
-//   @@index([movieId])
-//   @@map("reviews")
-// }
+  @@index([userId])
+  @@index([movieId])
+  @@map("reviews")
+}

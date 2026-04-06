@@ -1,14 +1,14 @@
-// model Watchlist {
-//   id        String @id @default(uuid())
+model Watchlist {
+  id        String @id @default(uuid())
 
-//   userId    String @map("user_id")
-//   movieId   String @map("movie_id")
+  userId    String @map("user_id")
+  movieId   String @map("movie_id")
 
-//   createdAt DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
-//   user      User  @relation(fields: [userId], references: [id])
-//   movie     Movie @relation(fields: [movieId], references: [id])
+  user      User  @relation(fields: [userId], references: [id])
+  movie     Movie @relation(fields: [movieId], references: [id])
 
-//   @@unique([userId, movieId])
-//   @@map("watchlists")
-// }
+  @@unique([userId, movieId])
+  @@map("watchlists")
+}
