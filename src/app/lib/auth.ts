@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./prisma";
+import { Role, UserStatus } from "../../generated/prisma/enums";
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
@@ -11,10 +12,31 @@ export const auth = betterAuth({
     enabled: true,
   },
 
-  session: {
-    expiresIn: 60 * 60 * 24 * 7, // 7 days
-    updateAge: 60 * 60 * 24, // refresh session daily
-  },
+  user: {
+    additionalFields: {
+      role: {
+        type: "string",
+        required: true,
+        defaultValue: Role.USER,
+      },
 
-  trustedOrigins: ["http://localhost:3000"],
+      status: {
+        type: "string",
+        required: true,
+        defaultValue: UserStatus.ACTIVE,
+      },
+
+      isDeleted: {
+        type: "boolean",
+        required: true,
+        defaultValue: false,
+      },
+
+      deletedAt: {
+        type: "date",
+        required: false,
+        defaultValue: null,
+      },
+    },
+  },
 });

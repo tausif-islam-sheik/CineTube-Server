@@ -1,7 +1,7 @@
 import express, { Application, Request, Response } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import { IndexRouter } from "./app/routes";
+import { IndexRoutes } from "./app/routes";
 
 const app: Application = express();
 
@@ -17,6 +17,6 @@ app.use(cookieParser());
 app.get("/", (req: Request, res: Response) =>{
     res.send("CineTube server is running......")
 })
-app.use("/api/v1", IndexRouter);
+app.use("/api/v1", IndexRoutes);
 
 export default app;
