@@ -16,5 +16,6 @@ enum ReviewStatus {
 
 enum UserStatus {
     ACTIVE
+    DELETED
     BLOCKED
 }

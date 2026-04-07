@@ -1,6 +1,8 @@
+import status from "http-status";
 import { auth } from "../../lib/auth";
 import { prisma } from "../../lib/prisma";
 import { ILoginUserPayload, IRegisterUserPayload } from "./auth.interface";
+import { UserStatus } from "../../../generated/prisma/enums";
 
 const register = async (payload: IRegisterUserPayload) => {
   const { name, email, password } = payload;
@@ -14,8 +16,7 @@ const register = async (payload: IRegisterUserPayload) => {
   });
 
   if (!data.user) {
-    // throw new AppError(status.BAD_REQUEST, "Failed to register user");
-    throw new Error("Failed to register user");
+    throw new AppError(status.BAD_REQUEST, "Failed to register user");
   }
 
   try {
@@ -68,16 +69,13 @@ const logIn = async (payload: ILoginUserPayload) => {
     },
   });
 
-//   if (data.user.status === UserStatus.BLOCKED) {
-//     throw new AppError(status.FORBIDDEN, "User is blocked");
-//   }
-  if (data.user.status === "BLOCKED") {
-    throw new Error("User is blocked");
+  if (data.user.status === UserStatus.BLOCKED) {
+    throw new AppError(status.FORBIDDEN, "User is blocked");
   }
 
-//   if (data.user.isDeleted || data.user.status === UserStatus.DELETED) {
-//     throw new AppError(status.NOT_FOUND, "User is deleted");
-//   }
+  if (data.user.isDeleted || data.user.status === UserStatus.DELETED) {
+    throw new AppError(status.NOT_FOUND, "User is deleted");
+  }
 
 //   const accessToken = tokenUtils.getAccessToken({
 //     userId: data.user.id,

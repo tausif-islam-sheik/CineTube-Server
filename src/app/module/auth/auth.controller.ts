@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { catchAsync } from "../../shared/catchAsync";
 import { sendResponse } from "../../shared/sendResponse";
 import { AuthService } from "./auth.service";
+import status from "http-status";
 
 const register = catchAsync(async (req: Request, res: Response) => {
   const payload = req.body;
@@ -13,8 +14,7 @@ const register = catchAsync(async (req: Request, res: Response) => {
   // tokenUtils.setBetterAuthSessionCookie(res, token as string);
 
   sendResponse(res, {
-    // httpStatusCode: status.CREATED,
-    httpStatusCode: 201,
+    httpStatusCode: status.CREATED,
     success: true,
     message: "User registered successfully",
     data: result
@@ -39,8 +39,7 @@ const logIn = catchAsync(async (req: Request, res: Response) => {
   // tokenUtils.setBetterAuthSessionCookie(res, token);
 
   sendResponse(res, {
-    // httpStatusCode: status.OK,
-    httpStatusCode: 201,
+    httpStatusCode: status.OK,
     success: true,
     message: "User logged In successfully",
     data: {
