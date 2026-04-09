@@ -17,6 +17,8 @@ model User {
   payments      Payment[]
   likes         Like[]
   comments      Comment[]
+  subscription  Subscription?
+  contentAccess ContentAccess[]
 
   sessions      Session[]
   accounts      Account[]

@@ -1,0 +1,44 @@
+model SubscriptionTier {
+  id                String          @id @default(uuid())
+  
+  name              SubscriptionTierName @unique
+  displayName       String          // e.g., "Premium Plus"
+  description       String?
+  price             Float           // Monthly price in USD
+  billingCycle      Int             @default(1) // months
+  currency          String          @default("USD")
+  features          Json            // JSON object of feature flags: {hd: true, 4k: false, downloads: 5}
+  
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  subscriptions     Subscription[]
+
+  @@index([name])
+  @@map("subscription_tiers")
+}
+
+model Subscription {
+  id                String          @id @default(uuid())
+  
+  userId            String          @unique @map("user_id")
+  tierId            String          @map("tier_id")
+  
+  startDate         DateTime        @default(now()) @map("start_date")
+  endDate           DateTime?       @map("end_date")
+  status            SubscriptionStatus @default(ACTIVE)
+  autoRenew         Boolean         @default(true) @map("auto_renew")
+  
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+  cancelledAt       DateTime?       @map("cancelled_at")
+
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tier              SubscriptionTier @relation(fields: [tierId], references: [id], onDelete: Restrict)
+  payments          Payment[]
+
+  @@index([userId])
+  @@index([tierId])
+  @@index([status])
+  @@map("subscriptions")
+}

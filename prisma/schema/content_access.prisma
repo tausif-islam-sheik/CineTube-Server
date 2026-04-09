@@ -1,0 +1,22 @@
+model ContentAccess {
+  id                String          @id @default(uuid())
+  
+  userId            String          @map("user_id")
+  movieId           String          @map("movie_id")
+  accessType        AccessType      // RENTAL or STREAMING (via subscription)
+  
+  grantedAt         DateTime        @default(now()) @map("granted_at")
+  expiresAt         DateTime?       @map("expires_at") // null for streaming (subscription), date for rental
+  
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movie             Movie           @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, movieId, accessType])
+  @@index([userId])
+  @@index([movieId])
+  @@index([expiresAt])
+  @@map("content_access")
+}

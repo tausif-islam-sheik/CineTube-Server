@@ -1,23 +1,35 @@
 model Movie {
-  id           String   @id @default(uuid())
-  title        String
-  description  String
-  genre        String[]
-  releaseYear  Int      @map("release_year")
-  director     String
-  cast         String[]
-  platform     String
+  id            String        @id @default(uuid())
+  title         String
+  slug          String?       // Optional slug, will be generated from title
+  description   String
+  genre         String[]
+  releaseYear   Int           @map("release_year")
+  director      String
+  cast          String[]
+  platform      String
+  language      String[]      @default(["English"])
+  
+  pricing       PricingType   @default(FREE)
+  price         Float?
+  youtubeLink   String?       @map("youtube_link")
+  posterUrl     String?       @map("poster_url")
+  trailerUrl    String?       @map("trailer_url")
+  duration      Int?          // in minutes
+  
+  averageRating Float?        @default(0) @map("average_rating")
+  
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  deletedAt     DateTime?     @map("deleted_at")
+  isDeleted     Boolean       @default(false) @map("is_deleted")
 
-  pricing      PricingType
-  price        Float?
-  youtubeLink  String?  @map("youtube_link")
-
-  createdAt    DateTime @default(now()) @map("created_at")
-
-  reviews      Review[]
-  watchlists   Watchlist[]
+  reviews       Review[]
+  watchlists    Watchlist[]
+  contentAccess ContentAccess[]
 
   @@index([title])
   @@index([releaseYear])
+  @@index([pricing])
   @@map("movies")
 }

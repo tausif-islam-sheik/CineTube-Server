@@ -19,3 +19,35 @@ enum UserStatus {
     DELETED
     BLOCKED
 }
+
+enum PaymentStatus {
+    PENDING
+    COMPLETED
+    FAILED
+    REFUNDED
+}
+
+enum PaymentMethod {
+    STRIPE
+    SSLCOMMERZ
+    WALLET
+}
+
+enum SubscriptionStatus {
+    ACTIVE
+    CANCELLED
+    EXPIRED
+    PAUSED
+}
+
+enum SubscriptionTierName {
+    FREE
+    STANDARD
+    PREMIUM
+    VIP
+}
+
+enum AccessType {
+    RENTAL
+    STREAMING
+}
