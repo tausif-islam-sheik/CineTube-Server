@@ -1,7 +1,7 @@
 model Movie {
   id            String        @id @default(uuid())
   title         String
-  slug          String?       // Optional slug, will be generated from title
+  slug          String?       @unique        // Optional slug, will be generated from title
   description   String
   genre         String[]
   releaseYear   Int           @map("release_year")
