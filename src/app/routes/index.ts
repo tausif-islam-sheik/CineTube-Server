@@ -5,6 +5,8 @@ import ReviewsRoutes from "../module/reviews/reviews.route";
 import CommentsRoutes from "../module/comments/comments.route";
 import LikesRoutes from "../module/likes/likes.route";
 import WatchlistRoutes from "../module/watchlist/watchlist.route";
+import PaymentsRoutes from "../module/payments/payments.route";
+import SubscriptionsRoutes from "../module/subscriptions/subscriptions.route";
 
 const router = Router();
 
@@ -14,5 +16,7 @@ router.use("/", ReviewsRoutes);
 router.use("/", CommentsRoutes);
 router.use("/", LikesRoutes);
 router.use("/watchlist", WatchlistRoutes);
+router.use("/", PaymentsRoutes);
+router.use("/", SubscriptionsRoutes);
 
 export const IndexRoutes = router;

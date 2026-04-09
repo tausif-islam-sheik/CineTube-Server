@@ -100,3 +100,51 @@ export const getAuthenticatedUser = (req: AuthenticatedRequest) => {
   }
   return req.user;
 };
+
+/**
+ * Middleware to check user role
+ * Requires authentication and specific role
+ */
+export const checkRole = (requiredRole: string) => {
+  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      // First check if user is authenticated
+      const sessionToken = req.cookies.session || req.headers.authorization?.replace("Bearer ", "");
+
+      if (!sessionToken) {
+        throw new AppError(status.UNAUTHORIZED, "No session token provided");
+      }
+
+      const session = await auth.api.getSession({
+        headers: req.headers as HeadersInit,
+      });
+
+      if (!session || !session.user) {
+        throw new AppError(status.UNAUTHORIZED, "Invalid or expired session");
+      }
+
+      // Attach user info to request
+      req.user = {
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.name,
+        role: (session.user as any).role || "USER",
+        status: (session.user as any).status || "ACTIVE",
+        isDeleted: (session.user as any).isDeleted || false,
+        emailVerified: session.user.emailVerified || false,
+      };
+
+      // Check if user has required role
+      if (req.user.role !== requiredRole) {
+        throw new AppError(status.FORBIDDEN, `This action requires ${requiredRole} role`);
+      }
+
+      next();
+    } catch (error) {
+      if (error instanceof AppError) {
+        return next(error);
+      }
+      return next(new AppError(status.UNAUTHORIZED, "Role authorization failed"));
+    }
+  };
+};
