@@ -3,7 +3,6 @@ import { prisma } from '../../lib/prisma';
 import AppError from '../../errorHelpers/AppError';
 import { CreateMovieInput, UpdateMovieInput, GetMoviesQuery } from './movies.validation';
 import { IMoviesService } from './movies.interface';
-import type { Prisma } from '@prisma/client';
 
 /**
  * Generate URL-friendly slug from string

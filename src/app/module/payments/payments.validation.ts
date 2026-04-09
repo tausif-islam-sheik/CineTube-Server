@@ -10,7 +10,7 @@ export const createPaymentSchema = z.object({
   paymentIntentId: z.string(),
   amount: z.number().positive(),
   currency: z.string(),
-  method: z.enum(['CARD', 'WALLET', 'BANK_TRANSFER']),
+  method: z.enum(['STRIPE', 'SSLCOMMERZ', 'WALLET']),
   description: z.string().optional(),
 });
 

@@ -22,7 +22,7 @@ export class ModerationController {
    */
   approveReview = catchAsync(async (req: Request, res: Response) => {
     const body = approveReviewSchema.parse(req.params);
-    const adminId = (req as AuthenticatedRequest).user?.id;
+    const adminId = (req as AuthenticatedRequest).user?.id || '';
 
     const result = await moderationService.approveReview(body.id, adminId);
 
@@ -40,7 +40,7 @@ export class ModerationController {
   rejectReview = catchAsync(async (req: Request, res: Response) => {
     const params = approveReviewSchema.parse(req.params);
     const body = rejectReviewSchema.parse({ ...req.body, id: params.id });
-    const adminId = (req as AuthenticatedRequest).user?.id;
+    const adminId = (req as AuthenticatedRequest).user?.id || '';
 
     const result = await moderationService.rejectReview(body.id, adminId, body);
 
@@ -58,7 +58,7 @@ export class ModerationController {
   deleteComment = catchAsync(async (req: Request, res: Response) => {
     const params = approveReviewSchema.parse(req.params);
     const body = deleteCommentSchema.parse({ ...req.body, id: params.id });
-    const adminId = (req as AuthenticatedRequest).user?.id;
+    const adminId = (req as AuthenticatedRequest).user?.id || '';
 
     const result = await moderationService.deleteComment(body.id, adminId, body);
 
@@ -75,7 +75,7 @@ export class ModerationController {
    */
   suspendUser = catchAsync(async (req: Request, res: Response) => {
     const body = suspendUserSchema.parse(req.body);
-    const adminId = (req as AuthenticatedRequest).user?.id;
+    const adminId = (req as AuthenticatedRequest).user?.id || '';
 
     const result = await moderationService.suspendUser(body, adminId);
 
@@ -92,7 +92,7 @@ export class ModerationController {
    */
   unsuspendUser = catchAsync(async (req: Request, res: Response) => {
     const body = unsuspendUserSchema.parse(req.params);
-    const adminId = (req as AuthenticatedRequest).user?.id;
+    const adminId = (req as AuthenticatedRequest).user?.id || '';
 
     const result = await moderationService.unsuspendUser(body.userId, adminId);
 
@@ -124,7 +124,12 @@ export class ModerationController {
       success: true,
       message: 'Moderation queue fetched successfully',
       data: result.data,
-      pagination: result.pagination,
+      meta: {
+        page: result.pagination.page,
+        limit: result.pagination.limit,
+        total: result.pagination.total,
+        totalPages: result.pagination.pages,
+      },
     });
   });
 
@@ -133,7 +138,7 @@ export class ModerationController {
    */
   flagContent = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const body = flagContentSchema.parse(req.body);
-    const userId = req.user?.id;
+    const userId = req.user?.id || '';
 
     const result = await moderationService.flagContent(userId, body);
 
@@ -165,7 +170,12 @@ export class ModerationController {
       success: true,
       message: 'Flagged content fetched successfully',
       data: result.data,
-      pagination: result.pagination,
+      meta: {
+        page: result.pagination.page,
+        limit: result.pagination.limit,
+        total: result.pagination.total,
+        totalPages: result.pagination.pages,
+      },
     });
   });
 
@@ -173,7 +183,7 @@ export class ModerationController {
    * Resolve a flag
    */
   resolveFlag = catchAsync(async (req: Request, res: Response) => {
-    const { flagId } = req.params;
+    const flagId = Array.isArray(req.params.flagId) ? req.params.flagId[0] : req.params.flagId;
     const body = resolveFlagSchema.parse(req.body);
     const adminId = (req as AuthenticatedRequest).user?.id;
 
@@ -207,7 +217,12 @@ export class ModerationController {
       success: true,
       message: 'Moderation history fetched successfully',
       data: result.data,
-      pagination: result.pagination,
+      meta: {
+        page: result.pagination.page,
+        limit: result.pagination.limit,
+        total: result.pagination.total,
+        totalPages: result.pagination.pages,
+      },
     });
   });
 

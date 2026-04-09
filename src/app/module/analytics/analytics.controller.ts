@@ -39,7 +39,12 @@ export class AnalyticsController {
       success: true,
       message: 'User stats fetched successfully',
       data: result.data,
-      pagination: result.pagination,
+      meta: {
+        page: result.pagination.page,
+        limit: result.pagination.limit,
+        total: result.pagination.total,
+        totalPages: result.pagination.pages,
+      },
     });
   });
 
@@ -56,7 +61,12 @@ export class AnalyticsController {
       success: true,
       message: 'Movie stats fetched successfully',
       data: result.data,
-      pagination: result.pagination,
+      meta: {
+        page: result.pagination.page,
+        limit: result.pagination.limit,
+        total: result.pagination.total,
+        totalPages: result.pagination.pages,
+      },
     });
   });
 

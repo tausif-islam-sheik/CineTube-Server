@@ -3,7 +3,6 @@ import { prisma } from '../../lib/prisma';
 import AppError from '../../errorHelpers/AppError';
 import { CreateCommentInput, UpdateCommentInput, GetCommentsQuery } from './comments.validation';
 import { ICommentsService } from './comments.interface';
-import type { Prisma } from '@prisma/client';
 
 export class CommentsService implements ICommentsService {
   /**

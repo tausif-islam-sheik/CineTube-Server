@@ -3,7 +3,6 @@ import { prisma } from '../../lib/prisma';
 import AppError from '../../errorHelpers/AppError';
 import { AddToWatchlistInput, GetWatchlistQuery } from './watchlist.validation';
 import { IWatchlistService } from './watchlist.interface';
-import type { Prisma } from '@prisma/client';
 
 export class WatchlistService implements IWatchlistService {
   /**

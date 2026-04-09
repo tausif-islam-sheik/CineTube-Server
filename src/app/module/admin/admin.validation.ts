@@ -7,14 +7,14 @@ export const updateUserRoleSchema = z.object({
 
 export const updateUserStatusSchema = z.object({
   userId: z.string().uuid(),
-  status: z.enum(['ACTIVE', 'SUSPENDED', 'DELETED']),
+  status: z.enum(['ACTIVE', 'BLOCKED', 'DELETED']),
 });
 
 export const getUsersQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
   page: z.coerce.number().int().min(1).default(1),
   role: z.enum(['USER', 'ADMIN']).optional(),
-  status: z.enum(['ACTIVE', 'SUSPENDED', 'DELETED']).optional(),
+  status: z.enum(['ACTIVE', 'BLOCKED', 'DELETED']).optional(),
   sortBy: z.enum(['createdAt', 'name']).default('createdAt'),
   order: z.enum(['asc', 'desc']).default('desc'),
 });

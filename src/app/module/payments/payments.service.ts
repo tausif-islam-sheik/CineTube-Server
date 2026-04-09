@@ -2,10 +2,9 @@
 import { prisma } from '../../lib/prisma';
 import { stripe, STRIPE_WEBHOOK_SECRET } from '../../lib/stripe';
 import AppError from '../../errorHelpers/AppError';
-import { CreatePaymentInput, CreatePaymentIntentInput, GetPaymentsQuery } from './payments.validation';
+import { CreatePaymentInput, CreatePaymentIntentInput } from './payments.validation';
 import { IPaymentService } from './payments.interface';
-import { PaymentStatus } from '@prisma/client';
-import crypto from 'crypto';
+import { PaymentStatus } from '../../../generated/prisma/enums';
 
 export class PaymentService implements IPaymentService {
   /**
@@ -174,7 +173,7 @@ export class PaymentService implements IPaymentService {
           pages,
         },
       };
-    } catch (error) {
+    } catch {
       throw new AppError(500, 'Failed to fetch user payments');
     }
   }
@@ -227,7 +226,7 @@ export class PaymentService implements IPaymentService {
           pages,
         },
       };
-    } catch (error) {
+    } catch {
       throw new AppError(500, 'Failed to fetch payments');
     }
   }
@@ -235,7 +234,7 @@ export class PaymentService implements IPaymentService {
   /**
    * Validate webhook signature from Stripe
    */
-  validatePaymentWebhook(body: any, signature: string) {
+  async validatePaymentWebhook(body: any, signature: string): Promise<any> {
     try {
       if (!STRIPE_WEBHOOK_SECRET) {
         throw new AppError(500, 'Stripe webhook secret not configured');
@@ -243,7 +242,7 @@ export class PaymentService implements IPaymentService {
 
       const event = stripe.webhooks.constructEvent(body, signature, STRIPE_WEBHOOK_SECRET);
       return event;
-    } catch (error) {
+    } catch {
       throw new AppError(400, 'Invalid webhook signature');
     }
   }
@@ -278,8 +277,8 @@ export class PaymentService implements IPaymentService {
       });
 
       return updated;
-    } catch (error) {
-      if (error instanceof AppError) throw error;
+    } catch (_error) {
+      if (_error instanceof AppError) throw _error;
       throw new AppError(500, 'Failed to process payment success');
     }
   }
@@ -314,8 +313,8 @@ export class PaymentService implements IPaymentService {
       });
 
       return updated;
-    } catch (error) {
-      if (error instanceof AppError) throw error;
+    } catch (_error) {
+      if (_error instanceof AppError) throw _error;
       throw new AppError(500, 'Failed to process payment failure');
     }
   }

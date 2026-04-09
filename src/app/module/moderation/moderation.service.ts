@@ -9,7 +9,7 @@ import {
   ResolveFlagInput,
 } from './moderation.validation';
 import { IModerationService } from './moderation.interface';
-import { ReviewStatus } from '@prisma/client';
+import { ReviewStatus } from '../../../generated/prisma/enums';
 
 export class ModerationService implements IModerationService {
   /**
@@ -143,7 +143,7 @@ export class ModerationService implements IModerationService {
       const suspended = await prisma.user.update({
         where: { id: input.userId },
         data: {
-          status: 'SUSPENDED',
+          status: 'BLOCKED',
         },
       });
 
@@ -170,8 +170,8 @@ export class ModerationService implements IModerationService {
         throw new AppError(404, 'User not found');
       }
 
-      if (user.status !== 'SUSPENDED') {
-        throw new AppError(400, 'User is not suspended');
+      if (user.status !== 'BLOCKED') {
+        throw new AppError(400, 'User is not blocked');
       }
 
       const unsuspended = await prisma.user.update({
@@ -193,54 +193,7 @@ export class ModerationService implements IModerationService {
    * Flag content for moderation review
    */
   async flagContent(userId: string, input: FlagContentInput) {
-    try {
-      // Verify content exists based on type
-      if (input.contentType === 'REVIEW') {
-        const review = await prisma.review.findUnique({
-          where: { id: input.contentId },
-        });
-        if (!review) throw new AppError(404, 'Review not found');
-      } else if (input.contentType === 'COMMENT') {
-        const comment = await prisma.comment.findUnique({
-          where: { id: input.contentId },
-        });
-        if (!comment) throw new AppError(404, 'Comment not found');
-      } else if (input.contentType === 'USER') {
-        const user = await prisma.user.findUnique({
-          where: { id: input.contentId },
-        });
-        if (!user) throw new AppError(404, 'User not found');
-      }
-
-      // Check if already flagged by this user
-      const existing = await prisma.flag.findFirst({
-        where: {
-          contentId: input.contentId,
-          contentType: input.contentType as any,
-          reportedBy: userId,
-        },
-      });
-
-      if (existing) {
-        throw new AppError(400, 'You have already flagged this content');
-      }
-
-      const flag = await prisma.flag.create({
-        data: {
-          contentId: input.contentId,
-          contentType: input.contentType as any,
-          reason: input.reason,
-          description: input.description,
-          reportedBy: userId,
-          status: 'PENDING',
-        },
-      });
-
-      return flag;
-    } catch (error) {
-      if (error instanceof AppError) throw error;
-      throw new AppError(500, 'Failed to flag content');
-    }
+    throw new AppError(501, 'Flag functionality not yet implemented - Flag model does not exist');
   }
 
   /**
@@ -261,7 +214,7 @@ export class ModerationService implements IModerationService {
       const [pendingReviews, pendingComments, totalReviews, totalComments] = await Promise.all([
         type === 'COMMENT' || !type
           ? prisma.comment.findMany({
-              where: { isDeleted: false },
+              where: {},
               skip: type === 'COMMENT' ? skip : 0,
               take: type === 'COMMENT' ? limit : undefined,
               orderBy: { [sortBy]: order as any },
@@ -283,7 +236,7 @@ export class ModerationService implements IModerationService {
               },
             })
           : Promise.resolve([]),
-        type === 'COMMENT' || !type ? prisma.comment.count({ where: { isDeleted: false } }) : Promise.resolve(0),
+        type === 'COMMENT' || !type ? prisma.comment.count() : Promise.resolve(0),
         type === 'REVIEW' || !type ? prisma.review.count({ where: { status: ReviewStatus.PENDING } }) : Promise.resolve(0),
       ]);
 
@@ -315,77 +268,14 @@ export class ModerationService implements IModerationService {
     sortBy: string = 'flagCount',
     order: string = 'desc',
   ) {
-    try {
-      const skip = (page - 1) * limit;
-
-      const whereClause: any = { status };
-      if (contentType) {
-        whereClause.contentType = contentType;
-      }
-
-      const [total, flags] = await Promise.all([
-        prisma.flag.count({ where: whereClause }),
-        prisma.flag.findMany({
-          where: whereClause,
-          orderBy: { [sortBy]: order as any },
-          skip,
-          take: limit,
-        }),
-      ]);
-
-      const pages = Math.ceil(total / limit);
-
-      return {
-        data: flags,
-        pagination: { total, page, limit, pages },
-      };
-    } catch (error) {
-      throw new AppError(500, 'Failed to fetch flagged content');
-    }
+    throw new AppError(501, 'Flag functionality not yet implemented - Flag model does not exist');
   }
 
   /**
    * Resolve a flagged content
    */
   async resolveFlag(flagId: string, adminId: string, input: ResolveFlagInput) {
-    try {
-      const flag = await prisma.flag.findUnique({
-        where: { id: flagId },
-      });
-
-      if (!flag) {
-        throw new AppError(404, 'Flag not found');
-      }
-
-      if (flag.status !== 'PENDING') {
-        throw new AppError(400, 'Only pending flags can be resolved');
-      }
-
-      const resolved = await prisma.flag.update({
-        where: { id: flagId },
-        data: {
-          status: 'RESOLVED',
-          resolvedBy: adminId,
-          resolvedAt: new Date(),
-          notes: input.notes,
-        },
-      });
-
-      // Take action based on decision
-      if (input.action === 'DELETED' && flag.contentType === 'COMMENT') {
-        await prisma.comment.delete({
-          where: { id: flag.contentId },
-        });
-      }
-
-      // Log moderation action
-      await this.logModerationAction(adminId, input.action, flag.contentType, flag.contentId, input.notes);
-
-      return resolved;
-    } catch (error) {
-      if (error instanceof AppError) throw error;
-      throw new AppError(500, 'Failed to resolve flag');
-    }
+    throw new AppError(501, 'Flag functionality not yet implemented - Flag model does not exist');
   }
 
   /**
@@ -399,35 +289,11 @@ export class ModerationService implements IModerationService {
     sortBy: string = 'createdAt',
     order: string = 'desc',
   ) {
-    try {
-      const skip = (page - 1) * limit;
-
-      const whereClause: any = {};
-      if (userId) whereClause.adminId = userId;
-      if (action) whereClause.action = action;
-
-      const [total, logs] = await Promise.all([
-        prisma.moderationLog.count({ where: whereClause }),
-        prisma.moderationLog.findMany({
-          where: whereClause,
-          orderBy: { [sortBy]: order as any },
-          skip,
-          take: limit,
-          include: {
-            admin: { select: { id: true, email: true, name: true } },
-          },
-        }),
-      ]);
-
-      const pages = Math.ceil(total / limit);
-
-      return {
-        data: logs,
-        pagination: { total, page, limit, pages },
-      };
-    } catch (error) {
-      throw new AppError(500, 'Failed to fetch moderation history');
-    }
+    // ModerationLog not implemented yet
+    return {
+      data: [],
+      pagination: { total: 0, page, limit, pages: 0 },
+    };
   }
 
   /**
@@ -439,8 +305,8 @@ export class ModerationService implements IModerationService {
         prisma.review.count({ where: { status: ReviewStatus.PENDING } }),
         prisma.review.count({ where: { status: ReviewStatus.APPROVED } }),
         prisma.review.count({ where: { status: ReviewStatus.REJECTED } }),
-        prisma.flag.count({ where: { status: 'PENDING' } }),
-        prisma.user.count({ where: { status: 'SUSPENDED' } }),
+        Promise.resolve(0),  // Flag model not implemented
+        prisma.user.count({ where: { status: 'BLOCKED' } }),
       ]);
 
       return {
@@ -450,7 +316,7 @@ export class ModerationService implements IModerationService {
           rejected: rejectedReviewsCount,
         },
         flaggedContent: flagsCount,
-        suspendedUsers: suspendedUsersCount,
+        blockedUsers: suspendedUsersCount,
       };
     } catch (error) {
       throw new AppError(500, 'Failed to fetch moderation stats');

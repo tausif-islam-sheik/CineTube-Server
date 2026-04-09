@@ -3,7 +3,6 @@ import { prisma } from '../../lib/prisma';
 import AppError from '../../errorHelpers/AppError';
 import { CreateReviewInput, UpdateReviewInput, GetReviewsQuery } from './reviews.validation';
 import { IReviewsService } from './reviews.interface';
-import type { Prisma } from '@prisma/client';
 
 export class ReviewsService implements IReviewsService {
   /**

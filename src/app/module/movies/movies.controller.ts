@@ -57,7 +57,7 @@ export class MoviesController {
    * Get a single movie by slug
    */
   static getMovieBySlug = catchAsync(async (req: Request, res: Response) => {
-    const { slug } = req.params;
+    const slug = Array.isArray(req.params.slug) ? req.params.slug[0] : req.params.slug;
 
     const movie = await moviesService.getMovieBySlug(slug);
 

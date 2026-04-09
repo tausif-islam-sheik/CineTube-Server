@@ -26,7 +26,12 @@ export class AdminController {
       success: true,
       message: 'Users fetched successfully',
       data: result.data,
-      pagination: result.pagination,
+      meta: {
+        page: result.pagination.page,
+        limit: result.pagination.limit,
+        total: result.pagination.total,
+        totalPages: result.pagination.pages,
+      },
     });
   });
 
@@ -34,7 +39,7 @@ export class AdminController {
    * Get user details
    */
   getUser = catchAsync(async (req: Request, res: Response) => {
-    const { userId } = req.params;
+    const userId = Array.isArray(req.params.userId) ? req.params.userId[0] : req.params.userId;
 
     const result = await adminService.getUser(userId);
 
@@ -51,7 +56,7 @@ export class AdminController {
    */
   updateUserRole = catchAsync(async (req: Request, res: Response) => {
     const body = updateUserRoleSchema.parse(req.body);
-    const adminId = (req as AuthenticatedRequest).user?.id;
+    const adminId = (req as AuthenticatedRequest).user?.id || '';
 
     const result = await adminService.updateUserRole(body, adminId);
 
@@ -68,7 +73,7 @@ export class AdminController {
    */
   updateUserStatus = catchAsync(async (req: Request, res: Response) => {
     const body = updateUserStatusSchema.parse(req.body);
-    const adminId = (req as AuthenticatedRequest).user?.id;
+    const adminId = (req as AuthenticatedRequest).user?.id || '';
 
     const result = await adminService.updateUserStatus(body, adminId);
 
@@ -85,7 +90,7 @@ export class AdminController {
    */
   promoteToAdmin = catchAsync(async (req: Request, res: Response) => {
     const body = createAdminSchema.parse(req.body);
-    const adminId = (req as AuthenticatedRequest).user?.id;
+    const adminId = (req as AuthenticatedRequest).user?.id || '';
 
     const result = await adminService.promoteToAdmin(body, adminId);
 
@@ -101,9 +106,10 @@ export class AdminController {
    * Update user
    */
   updateUser = catchAsync(async (req: Request, res: Response) => {
-    const params = { userId: req.params.userId };
+    const userId = Array.isArray(req.params.userId) ? req.params.userId[0] : req.params.userId;
+    const params = { userId };
     const body = updateUserSchema.parse({ ...req.body, ...params });
-    const adminId = (req as AuthenticatedRequest).user?.id;
+    const adminId = (req as AuthenticatedRequest).user?.id || '';
 
     const result = await adminService.updateUser(body, adminId);
 
@@ -119,9 +125,10 @@ export class AdminController {
    * Delete user
    */
   deleteUser = catchAsync(async (req: Request, res: Response) => {
-    const params = { userId: req.params.userId };
+    const userId = Array.isArray(req.params.userId) ? req.params.userId[0] : req.params.userId;
+    const params = { userId };
     const body = deleteUserSchema.parse({ ...req.body, ...params });
-    const adminId = (req as AuthenticatedRequest).user?.id;
+    const adminId = (req as AuthenticatedRequest).user?.id || '';
 
     const result = await adminService.deleteUser(body, adminId);
 
@@ -146,7 +153,12 @@ export class AdminController {
       success: true,
       message: 'Admin log fetched successfully',
       data: result.data,
-      pagination: result.pagination,
+      meta: {
+        page: result.pagination.page,
+        limit: result.pagination.limit,
+        total: result.pagination.total,
+        totalPages: result.pagination.pages,
+      },
     });
   });
 

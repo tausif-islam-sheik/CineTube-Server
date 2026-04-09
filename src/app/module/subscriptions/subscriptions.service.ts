@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { prisma } from '../../lib/prisma';
-import { stripe } from '../../lib/stripe';
 import AppError from '../../errorHelpers/AppError';
 import {
   CreateSubscriptionInput,
@@ -10,7 +9,7 @@ import {
   UpdateSubscriptionTierInput,
 } from './subscriptions.validation';
 import { ISubscriptionService } from './subscriptions.interface';
-import { SubscriptionStatus } from '@prisma/client';
+import { SubscriptionStatus } from '../../../generated/prisma/enums';
 
 export class SubscriptionService implements ISubscriptionService {
   /**
@@ -46,23 +45,20 @@ export class SubscriptionService implements ISubscriptionService {
         throw new AppError(400, 'User already has an active subscription');
       }
 
-      const renewalDate = new Date();
-      if (tier.billingCycle === 'MONTHLY') {
-        renewalDate.setMonth(renewalDate.getMonth() + 1);
-      } else {
-        renewalDate.setFullYear(renewalDate.getFullYear() + 1);
-      }
+      // Calculate end date based on billing cycle
+      const endDate = new Date();
+      endDate.setMonth(endDate.getMonth() + (tier.billingCycle || 1));
 
       const subscription = await prisma.subscription.create({
         data: {
           userId,
-          subscriptionTierId: input.subscriptionTierId,
+          tierId: input.subscriptionTierId,
           status: SubscriptionStatus.ACTIVE,
-          renewalDate,
+          endDate,
           autoRenew: input.autoRenew ?? true,
         },
         include: {
-          subscriptionTier: true,
+          tier: true,
           user: {
             select: {
               id: true,
@@ -88,7 +84,7 @@ export class SubscriptionService implements ISubscriptionService {
       const subscription = await prisma.subscription.findUnique({
         where: { id },
         include: {
-          subscriptionTier: true,
+          tier: true,
           user: {
             select: {
               id: true,
@@ -121,7 +117,7 @@ export class SubscriptionService implements ISubscriptionService {
           status: SubscriptionStatus.ACTIVE,
         },
         include: {
-          subscriptionTier: true,
+          tier: true,
           user: {
             select: {
               id: true,
@@ -133,7 +129,7 @@ export class SubscriptionService implements ISubscriptionService {
       });
 
       return subscription || null;
-    } catch (error) {
+    } catch {
       throw new AppError(500, 'Failed to fetch user subscription');
     }
   }
@@ -188,7 +184,7 @@ export class SubscriptionService implements ISubscriptionService {
           pages,
         },
       };
-    } catch (error) {
+    } catch {
       throw new AppError(500, 'Failed to fetch user subscriptions');
     }
   }
@@ -219,7 +215,7 @@ export class SubscriptionService implements ISubscriptionService {
           skip,
           take: limit,
           include: {
-            subscriptionTier: true,
+            tier: true,
             user: {
               select: {
                 id: true,
@@ -242,7 +238,7 @@ export class SubscriptionService implements ISubscriptionService {
           pages,
         },
       };
-    } catch (error) {
+    } catch {
       throw new AppError(500, 'Failed to fetch subscriptions');
     }
   }
@@ -268,10 +264,10 @@ export class SubscriptionService implements ISubscriptionService {
         where: { id },
         data: {
           autoRenew: input.autoRenew,
-          subscriptionTierId: input.subscriptionTierId,
+          tierId: input.subscriptionTierId,
         },
         include: {
-          subscriptionTier: true,
+          tier: true,
           user: {
             select: {
               id: true,
@@ -292,7 +288,7 @@ export class SubscriptionService implements ISubscriptionService {
   /**
    * Cancel a subscription
    */
-  async cancelSubscription(id: string, userId: string, input: CancelSubscriptionInput) {
+  async cancelSubscription(id: string, userId: string) {
     try {
       const subscription = await prisma.subscription.findUnique({
         where: { id },
@@ -311,9 +307,10 @@ export class SubscriptionService implements ISubscriptionService {
         data: {
           status: SubscriptionStatus.CANCELLED,
           autoRenew: false,
+          cancelledAt: new Date(),
         },
         include: {
-          subscriptionTier: true,
+          tier: true,
           user: {
             select: {
               id: true,
@@ -334,15 +331,12 @@ export class SubscriptionService implements ISubscriptionService {
   /**
    * Check if user has access to content
    */
-  async checkSubscriptionAccess(userId: string, contentType: string) {
+  async checkSubscriptionAccess(userId: string) {
     try {
-      const subscription = await prisma.subscription.findFirst({
-        where: {
-          userId,
-          status: SubscriptionStatus.ACTIVE,
-        },
+      const subscription = await prisma.subscription.findUnique({
+        where: { userId },
         include: {
-          subscriptionTier: true,
+          tier: true,
         },
       });
 
@@ -354,7 +348,7 @@ export class SubscriptionService implements ISubscriptionService {
       }
 
       // Check if subscription has expired
-      if (new Date() > subscription.renewalDate) {
+      if (subscription.endDate && new Date() > subscription.endDate) {
         if (subscription.autoRenew) {
           // Auto-renewal should have happened
           return {
@@ -369,12 +363,19 @@ export class SubscriptionService implements ISubscriptionService {
         };
       }
 
+      if (subscription.status !== SubscriptionStatus.ACTIVE) {
+        return {
+          hasAccess: false,
+          reason: 'Subscription is not active',
+        };
+      }
+
       return {
         hasAccess: true,
-        subscriptionTier: subscription.subscriptionTier,
-        renewalDate: subscription.renewalDate,
+        subscriptionTier: subscription.tier,
+        endDate: subscription.endDate,
       };
-    } catch (error) {
+    } catch {
       throw new AppError(500, 'Failed to check subscription access');
     }
   }
@@ -386,19 +387,17 @@ export class SubscriptionService implements ISubscriptionService {
     try {
       const tier = await prisma.subscriptionTier.create({
         data: {
-          name: input.name,
+          name: input.name as any,
+          displayName: input.name,
           description: input.description,
           price: input.price,
-          billingCycle: input.billingCycle,
-          features: input.features,
-          maxConcurrentStreams: input.maxConcurrentStreams,
-          maxDownloads: input.maxDownloads,
-          isActive: input.isActive,
+          billingCycle: input.billingCycle === 'YEARLY' ? 12 : 1,
+          features: input.features || [],
         },
       });
 
       return tier;
-    } catch (error) {
+    } catch {
       throw new AppError(500, 'Failed to create subscription tier');
     }
   }
@@ -442,7 +441,7 @@ export class SubscriptionService implements ISubscriptionService {
           pages,
         },
       };
-    } catch (error) {
+    } catch {
       throw new AppError(500, 'Failed to fetch subscription tiers');
     }
   }
@@ -483,13 +482,10 @@ export class SubscriptionService implements ISubscriptionService {
       const updated = await prisma.subscriptionTier.update({
         where: { id },
         data: {
-          name: input.name,
+          displayName: input.name,
           description: input.description,
           price: input.price,
           features: input.features,
-          maxConcurrentStreams: input.maxConcurrentStreams,
-          maxDownloads: input.maxDownloads,
-          isActive: input.isActive,
         },
       });
 
@@ -516,7 +512,7 @@ export class SubscriptionService implements ISubscriptionService {
       // Check if any subscriptions use this tier
       const activeSubscriptions = await prisma.subscription.count({
         where: {
-          subscriptionTierId: id,
+          tierId: id,
           status: SubscriptionStatus.ACTIVE,
         },
       });
@@ -546,14 +542,14 @@ export class SubscriptionService implements ISubscriptionService {
     try {
       const expiredSubscriptions = await prisma.subscription.findMany({
         where: {
-          renewalDate: {
+          endDate: {
             lte: new Date(),
           },
           autoRenew: true,
           status: SubscriptionStatus.ACTIVE,
         },
         include: {
-          subscriptionTier: true,
+          tier: true,
           user: {
             select: {
               id: true,
@@ -563,27 +559,22 @@ export class SubscriptionService implements ISubscriptionService {
         },
       });
 
-      const renewedCount = 0;
-
       for (const subscription of expiredSubscriptions) {
         try {
-          const newRenewalDate = new Date(subscription.renewalDate);
-          if (subscription.subscriptionTier.billingCycle === 'MONTHLY') {
-            newRenewalDate.setMonth(newRenewalDate.getMonth() + 1);
-          } else {
-            newRenewalDate.setFullYear(newRenewalDate.getFullYear() + 1);
-          }
+          if (!subscription.endDate) continue;
+
+          const newEndDate = new Date(subscription.endDate);
+          newEndDate.setMonth(newEndDate.getMonth() + (subscription.tier.billingCycle || 1));
 
           // In production, charge user here via Stripe
-          // For now, just update renewal date
+          // For now, just update end date
           await prisma.subscription.update({
             where: { id: subscription.id },
             data: {
-              renewalDate: newRenewalDate,
+              endDate: newEndDate,
             },
           });
-        } catch (error) {
-          console.error(`Failed to renew subscription ${subscription.id}:`, error);
+        } catch {
           // Mark as failed - in production, send notification to user
         }
       }
@@ -592,7 +583,7 @@ export class SubscriptionService implements ISubscriptionService {
         message: 'Subscription renewal process completed',
         processedCount: expiredSubscriptions.length,
       };
-    } catch (error) {
+    } catch {
       throw new AppError(500, 'Failed to renew subscriptions');
     }
   }

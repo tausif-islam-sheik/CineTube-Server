@@ -230,7 +230,7 @@ export class AnalyticsService implements IAnalyticsService {
         prisma.subscription.count({ where: { status: 'ACTIVE' } }),
         prisma.subscription.count({ where: { status: 'CANCELLED' } }),
         prisma.subscription.groupBy({
-          by: ['subscriptionTierId'],
+          by: ['tierId'],
           _count: true,
           where: { status: 'ACTIVE' },
         }),

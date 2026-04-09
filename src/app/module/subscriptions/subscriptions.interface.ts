@@ -15,8 +15,8 @@ export interface ISubscriptionService {
   getUserSubscriptions(userId: string, limit: number, page: number, status?: string, sortBy?: string, order?: string): Promise<any>;
   getAllSubscriptions(limit: number, page: number, status?: string, sortBy?: string, order?: string): Promise<any>;
   updateSubscription(id: string, userId: string, input: UpdateSubscriptionInput): Promise<any>;
-  cancelSubscription(id: string, userId: string, input: CancelSubscriptionInput): Promise<any>;
-  checkSubscriptionAccess(userId: string, contentType: string): Promise<any>;
+  cancelSubscription(id: string, userId: string): Promise<any>;
+  checkSubscriptionAccess(userId: string): Promise<any>;
   createSubscriptionTier(input: CreateSubscriptionTierInput): Promise<any>;
   getSubscriptionTiers(limit: number, page: number, isActive?: boolean, sortBy?: string, order?: string): Promise<any>;
   getSubscriptionTier(id: string): Promise<any>;
