@@ -1,150 +1,185 @@
-import { Request, Response, NextFunction } from "express";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { NextFunction, Request, Response } from "express";
 import status from "http-status";
-import { auth } from "../lib/auth";
+import { Role, UserStatus } from "../../generated/prisma/enums";
+import { env } from "../config/env";
 import AppError from "../errorHelpers/AppError";
+import { prisma } from "../lib/prisma";
+import { CookieUtils } from "../utils/cookie";
+import { jwtUtils } from "../utils/jwt";
 
 export interface AuthenticatedRequest extends Request {
   user?: {
-    id: string;
+    userId: string;
     email: string;
-    name: string | null;
-    role: string;
-    status: string;
-    isDeleted: boolean;
-    emailVerified: boolean;
+    role: Role;
   };
 }
 
 /**
- * Middleware to check and validate Better Auth session
- * Attaches user info to req.user if authenticated
- * Can be used as optional (continues without error) or required (throws 401)
+ * Core authentication middleware factory
+ * Returns a middleware that validates session token and JWT token
  */
-export const checkAuth = (required: boolean = true) => {
-  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+const createAuthMiddleware = (...allowedRoles: Role[]) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Extract session token from cookies or headers
-      const sessionToken = req.cookies.session || req.headers.authorization?.replace("Bearer ", "");
+      // Session Token Verification
+      const sessionToken = CookieUtils.getCookie(
+        req,
+        "better-auth.session_token",
+      );
 
       if (!sessionToken) {
-        if (required) {
-          throw new AppError(status.UNAUTHORIZED, "No session token provided");
-        }
-        // Optional auth: continue without user
-        return next();
+        throw new AppError(
+          status.UNAUTHORIZED,
+          "Unauthorized access! No session token provided.",
+        );
       }
 
-      // Verify session using Better Auth API
-      const session = await auth.api.getSession({
-        headers: req.headers as HeadersInit,
-      });
+      if (sessionToken) {
+        const sessionExists = await prisma.session.findFirst({
+          where: {
+            token: sessionToken,
+            expiresAt: {
+              gt: new Date(),
+            },
+          },
+          include: {
+            user: true,
+          },
+        });
 
-      if (!session || !session.user) {
-        if (required) {
-          throw new AppError(status.UNAUTHORIZED, "Invalid or expired session");
+        if (sessionExists && sessionExists.user) {
+          const user = sessionExists.user;
+
+          const now = new Date();
+          const expiresAt = new Date(sessionExists.expiresAt);
+          const createdAt = new Date(sessionExists.createdAt!);
+
+          const sessionLifeTime = expiresAt.getTime() - createdAt.getTime();
+          const timeRemaining = expiresAt.getTime() - now.getTime();
+          const percentRemaining = (timeRemaining / sessionLifeTime) * 100;
+
+          if (percentRemaining < 20) {
+            res.setHeader("X-Session-Refresh", "true");
+            res.setHeader("X-Session-Expires-At", expiresAt.toISOString());
+            res.setHeader("X-Time-Remaining", timeRemaining.toString());
+
+            console.log("Session Expiring Soon!!");
+          }
+
+          if (
+            user.status === UserStatus.BLOCKED ||
+            user.status === UserStatus.DELETED
+          ) {
+            throw new AppError(
+              status.UNAUTHORIZED,
+              "Unauthorized access! User is not active.",
+            );
+          }
+
+          if (user.isDeleted) {
+            throw new AppError(
+              status.UNAUTHORIZED,
+              "Unauthorized access! User is deleted.",
+            );
+          }
+
+          if (
+            allowedRoles.length > 0 &&
+            !allowedRoles.includes(user.role)
+          ) {
+            throw new AppError(
+              status.FORBIDDEN,
+              "Forbidden access! You do not have permission to access this resource.",
+            );
+          }
+          (req as AuthenticatedRequest).user = {
+            userId: user.id,
+            role: user.role,
+            email: user.email,
+          };
         }
-        // Optional auth: continue without user
-        return next();
+
+        const accessToken = CookieUtils.getCookie(req, "accessToken");
+
+        if (!accessToken) {
+          throw new AppError(
+            status.UNAUTHORIZED,
+            "Unauthorized access! No access token provided.",
+          );
+        }
       }
 
-      // Attach user info to request
-      req.user = {
-        id: session.user.id,
-        email: session.user.email,
-        name: session.user.name,
-        role: (session.user as any).role || "USER",
-        status: (session.user as any).status || "ACTIVE",
-        isDeleted: (session.user as any).isDeleted || false,
-        emailVerified: session.user.emailVerified || false,
-      };
+      // Access Token Verification
+      const accessToken = CookieUtils.getCookie(req, "accessToken");
+
+      if (!accessToken) {
+        throw new AppError(
+          status.UNAUTHORIZED,
+          "Unauthorized access! No access token provided.",
+        );
+      }
+
+      const verifiedToken = jwtUtils.verifyToken(
+        accessToken,
+        env.ACCESS_TOKEN_SECRET,
+      );
+
+      if (!verifiedToken.success) {
+        throw new AppError(
+          status.UNAUTHORIZED,
+          "Unauthorized access! Invalid access token.",
+        );
+      }
+
+      if (
+        allowedRoles.length > 0 &&
+        !allowedRoles.includes(verifiedToken.data!.role as Role)
+      ) {
+        throw new AppError(
+          status.FORBIDDEN,
+          "Forbidden access! You do not have permission to access this resource.",
+        );
+      }
 
       next();
-    } catch (error) {
-      if (required) {
-        if (error instanceof AppError) {
-          return next(error);
-        }
-        return next(new AppError(status.UNAUTHORIZED, "Authentication failed"));
-      }
-      // Optional auth: continue even on error
-      next();
+    } catch (error: any) {
+      next(error);
     }
   };
 };
 
 /**
- * Middleware to require authentication
- * Throws 401 if user is not authenticated
+ * Middleware to require authentication (any role)
  */
-export const requireAuth = checkAuth(true);
+export const requireAuth = createAuthMiddleware();
 
 /**
- * Middleware to optionally authenticate
- * Does not throw error if authentication fails
+ * Middleware factory to require specific roles
  */
-export const optionalAuth = checkAuth(false);
-
-/**
- * Helper function to check if user is authenticated
- */
-export const isAuthenticated = (req: AuthenticatedRequest): boolean => {
-  return !!(req.user && req.user.id);
+export const requireRole = (...roles: Role[]) => {
+  return createAuthMiddleware(...roles);
 };
 
 /**
- * Helper function to get authenticated user or throw error
+ * Helper to check if user is authenticated
  */
-export const getAuthenticatedUser = (req: AuthenticatedRequest) => {
-  if (!req.user) {
-    throw new AppError(status.UNAUTHORIZED, "Authentication required");
-  }
-  return req.user;
+export const isAuthenticated = (req: Request): boolean => {
+  return !!(req as AuthenticatedRequest).user;
 };
 
 /**
- * Middleware to check user role
- * Requires authentication and specific role
+ * Helper to get authenticated user
  */
-export const checkRole = (requiredRole: string) => {
-  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-      // First check if user is authenticated
-      const sessionToken = req.cookies.session || req.headers.authorization?.replace("Bearer ", "");
+export const getAuthenticatedUser = (req: Request) => {
+  return (req as AuthenticatedRequest).user;
+};
 
-      if (!sessionToken) {
-        throw new AppError(status.UNAUTHORIZED, "No session token provided");
-      }
-
-      const session = await auth.api.getSession({
-        headers: req.headers as HeadersInit,
-      });
-
-      if (!session || !session.user) {
-        throw new AppError(status.UNAUTHORIZED, "Invalid or expired session");
-      }
-
-      // Attach user info to request
-      req.user = {
-        id: session.user.id,
-        email: session.user.email,
-        name: session.user.name,
-        role: (session.user as any).role || "USER",
-        status: (session.user as any).status || "ACTIVE",
-        isDeleted: (session.user as any).isDeleted || false,
-        emailVerified: session.user.emailVerified || false,
-      };
-
-      // Check if user has required role
-      if (req.user.role !== requiredRole) {
-        throw new AppError(status.FORBIDDEN, `This action requires ${requiredRole} role`);
-      }
-
-      next();
-    } catch (error) {
-      if (error instanceof AppError) {
-        return next(error);
-      }
-      return next(new AppError(status.UNAUTHORIZED, "Role authorization failed"));
-    }
-  };
+/**
+ * Helper factory to require specific roles
+ * Alias for requireRole
+ */
+export const checkRole = (...roles: Role[]) => {
+  return requireRole(...roles);
 };

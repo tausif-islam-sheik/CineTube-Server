@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import status from "http-status";
 import { auth } from "../../lib/auth";
 import { prisma } from "../../lib/prisma";
@@ -6,6 +7,7 @@ import { UserStatus } from "../../../generated/prisma/enums";
 import AppError from "../../errorHelpers/AppError";
 import { emailService } from "../../lib/email";
 import { env } from "../../config/env";
+import { jwtUtils } from "../../utils/jwt";
 import crypto from "crypto";
 
 const register = async (payload: IRegisterUserPayload) => {
@@ -73,6 +75,23 @@ const logIn = async (payload: ILoginUserPayload) => {
     throw new AppError(status.NOT_FOUND, "User is deleted");
   }
 
+  // Get the session token from database
+  const latestSession = await prisma.session.findFirst({
+    where: { userId: data.user.id },
+    orderBy: { createdAt: "desc" },
+  });
+
+  // Generate JWT tokens
+  const { accessToken, refreshToken } = jwtUtils.generateTokenPair(
+    {
+      userId: data.user.id,
+      email: data.user.email,
+      role: (data.user as any).role,
+    },
+    env.ACCESS_TOKEN_SECRET,
+    env.REFRESH_TOKEN_SECRET
+  );
+
   return {
     user: {
       id: data.user.id,
@@ -82,10 +101,69 @@ const logIn = async (payload: ILoginUserPayload) => {
       status: (data.user as any).status,
       emailVerified: data.user.emailVerified,
     },
+    sessionToken: latestSession?.token || null,
+    accessToken,
+    refreshToken,
   };
 };
 
-const logout = async (userId: string) => {
+const refreshToken = async (payload: { refreshToken: string }) => {
+  const { refreshToken: token } = payload;
+
+  if (!token) {
+    throw new AppError(
+      status.UNAUTHORIZED,
+      "Refresh token is required"
+    );
+  }
+
+  // Verify refresh token
+  const verifiedToken = jwtUtils.verifyToken(
+    token,
+    env.REFRESH_TOKEN_SECRET
+  );
+
+  if (!verifiedToken.success || !verifiedToken.data) {
+    throw new AppError(
+      status.UNAUTHORIZED,
+      "Invalid or expired refresh token"
+    );
+  }
+
+  // Get user info
+  const user = await prisma.user.findUnique({
+    where: { id: verifiedToken.data.userId },
+  });
+
+  if (!user) {
+    throw new AppError(status.NOT_FOUND, "User not found");
+  }
+
+  if (user.status === UserStatus.BLOCKED) {
+    throw new AppError(status.FORBIDDEN, "User is blocked");
+  }
+
+  if (user.isDeleted) {
+    throw new AppError(status.NOT_FOUND, "User is deleted");
+  }
+
+  // Generate new access token
+  const newAccessToken = jwtUtils.generateToken(
+    {
+      userId: user.id,
+      email: user.email,
+      role: (user as any).role,
+    },
+    env.ACCESS_TOKEN_SECRET,
+    "15m"
+  );
+
+  return {
+    accessToken: newAccessToken,
+  };
+};
+
+const logout = async () => {
   // Better Auth handles session invalidation internally
   // This is just a placeholder for any cleanup if needed
   return {
@@ -144,8 +222,13 @@ const forgotPassword = async (email: string) => {
 const resetPassword = async (
   email: string,
   resetToken: string,
-  newPassword: string
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _newPassword?: string
 ) => {
+  // Note: _newPassword parameter is accepted for future implementation of password hashing.
+  // Current implementation validates the reset token.
+  // TODO: Implement password hashing when full password management is added
+  
   // Validate user exists
   const user = await prisma.user.findUnique({
     where: { email },
@@ -214,6 +297,7 @@ const verifyEmail = async (email: string) => {
 export const AuthService = {
   register,
   logIn,
+  refreshToken,
   logout,
   forgotPassword,
   resetPassword,

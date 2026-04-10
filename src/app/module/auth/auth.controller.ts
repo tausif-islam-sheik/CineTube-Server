@@ -4,6 +4,7 @@ import { sendResponse } from "../../shared/sendResponse";
 import { AuthService } from "./auth.service";
 import status from "http-status";
 import { AuthenticatedRequest } from "../../middleware/checkAuth";
+import { CookieUtils } from "../../utils/cookie";
 
 const register = catchAsync(async (req: Request, res: Response) => {
   const payload = req.body;
@@ -21,6 +22,22 @@ const logIn = catchAsync(async (req: Request, res: Response) => {
   const payload = req.body;
   const result = await AuthService.logIn(payload);
 
+  // Set access token cookie (short-lived - 15 minutes)
+  CookieUtils.setCookie(res, "accessToken", result.accessToken, {
+    maxAge: 15 * 60 * 1000, // 15 minutes
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  });
+
+  // Set refresh token cookie (long-lived - 7 days)
+  CookieUtils.setCookie(res, "refreshToken", result.refreshToken, {
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  });
+
   sendResponse(res, {
     httpStatusCode: status.OK,
     success: true,
@@ -29,11 +46,38 @@ const logIn = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const refresh = catchAsync(async (req: Request, res: Response) => {
+  const refreshToken = CookieUtils.getCookie(req, "refreshToken") || req.body.refreshToken;
+
+  if (!refreshToken) {
+    throw new Error("Refresh token is required");
+  }
+
+  const result = await AuthService.refreshToken({ refreshToken });
+
+  // Set new access token cookie (short-lived - 15 minutes)
+  CookieUtils.setCookie(res, "accessToken", result.accessToken, {
+    maxAge: 15 * 60 * 1000, // 15 minutes
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  });
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Token refreshed successfully",
+    data: result,
+  });
+});
+
 const logout = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const result = await AuthService.logout(req.user?.id || "");
+  const result = await AuthService.logout();
 
   // Clear session cookie
   res.clearCookie("session");
+  res.clearCookie("accessToken");
+  res.clearCookie("refreshToken");
 
   sendResponse(res, {
     httpStatusCode: status.OK,
@@ -82,6 +126,7 @@ const verifyEmail = catchAsync(async (req: Request, res: Response) => {
 export const AuthController = {
   register,
   logIn,
+  refresh,
   logout,
   forgotPassword,
   resetPassword,
