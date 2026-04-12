@@ -37,7 +37,8 @@ export class ReviewsService implements IReviewsService {
           userId,
           rating: data.rating,
           title: data.title,
-          content: data.content,
+          content: data.comment,
+          spoiler: data.containsSpoiler ?? false,
           status: 'PENDING',
         },
       });
@@ -174,7 +175,8 @@ export class ReviewsService implements IReviewsService {
         data: {
           rating: data.rating ?? review.rating,
           title: data.title ?? review.title,
-          content: data.content ?? review.content,
+          content: data.comment ?? review.content,
+          spoiler: data.containsSpoiler ?? review.spoiler,
           updatedAt: new Date(),
         },
       });

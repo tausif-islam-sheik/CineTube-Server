@@ -49,8 +49,8 @@ export const getMoviesQuerySchema = z.object({
     releaseYear: z.coerce.number().int().min(1800).optional(),
     pricing: z.enum(['FREE', 'PREMIUM']).optional(),
     language: z.string().optional(),
-    minRating: z.coerce.number().min(0).max(5).optional(),
-    maxRating: z.coerce.number().min(0).max(5).optional(),
+    minRating: z.coerce.number().min(0).max(10).optional(),
+    maxRating: z.coerce.number().min(0).max(10).optional(),
 
     // Sorting
     sortBy: z.enum(['rating', 'releaseYear', 'createdAt', 'title']).default('createdAt'),

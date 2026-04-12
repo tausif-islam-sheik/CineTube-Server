@@ -4,17 +4,19 @@ import { z } from 'zod';
 export const createReviewSchema = z.object({
   body: z.object({
     movieId: z.string().uuid('Invalid movie ID'),
-    rating: z.number().int().min(1, 'Rating must be at least 1').max(5, 'Rating cannot exceed 5'),
+    rating: z.number().int().min(1, 'Rating must be at least 1').max(10, 'Rating cannot exceed 10'),
     title: z.string().min(3, 'Title must be at least 3 characters').max(100),
-    content: z.string().min(10, 'Content must be at least 10 characters').max(5000),
+    comment: z.string().min(10, 'Comment must be at least 10 characters').max(5000),
+    containsSpoiler: z.boolean().default(false),
   }),
 });
 
 export const updateReviewSchema = z.object({
   body: z.object({
-    rating: z.number().int().min(1).max(5).optional(),
+    rating: z.number().int().min(1).max(10).optional(),
     title: z.string().min(3).max(100).optional(),
-    content: z.string().min(10).max(5000).optional(),
+    comment: z.string().min(10).max(5000).optional(),
+    containsSpoiler: z.boolean().optional(),
   }),
 });
 

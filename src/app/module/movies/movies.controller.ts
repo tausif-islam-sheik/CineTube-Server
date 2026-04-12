@@ -35,7 +35,7 @@ export class MoviesController {
    */
   static getMovies = catchAsync(async (req: Request, res: Response) => {
     // Validate query parameters
-    const validatedQuery = getMoviesQuerySchema.parse({ query: req.query });
+    const validatedQuery = getMoviesQuerySchema.parse({ query: req.query || {} });
 
     const result = await moviesService.getMovies(validatedQuery.query);
 
@@ -54,12 +54,23 @@ export class MoviesController {
   });
 
   /**
-   * Get a single movie by slug
+   * Get a single movie by slug or ID
    */
   static getMovieBySlug = catchAsync(async (req: Request, res: Response) => {
-    const slug = Array.isArray(req.params.slug) ? req.params.slug[0] : req.params.slug;
+    const slugOrId = Array.isArray(req.params.slug) ? req.params.slug[0] : req.params.slug;
 
-    const movie = await moviesService.getMovieBySlug(slug);
+    let movie = null;
+    
+    // Check if the parameter is a valid UUID to try ID lookup first
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(slugOrId)) {
+      movie = await moviesService.getMovieById(slugOrId);
+    }
+
+    // Fallback to slug lookup if not found by ID or not a UUID
+    if (!movie) {
+      movie = await moviesService.getMovieBySlug(slugOrId);
+    }
 
     if (!movie) {
       throw new AppError(404, 'Movie not found');

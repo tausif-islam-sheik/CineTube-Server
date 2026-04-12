@@ -11,7 +11,7 @@ import { auth } from "../lib/auth";
 
 export interface AuthenticatedRequest extends Request {
   user?: {
-    userId: string;
+    id: string;
     email: string;
     role: Role;
   };
@@ -44,7 +44,7 @@ const createAuthMiddleware = (...allowedRoles: Role[]) => {
         }
 
         authenticatedUser = {
-          userId: user.id,
+          id: user.id,
           role: (user as any).role as Role,
           email: user.email,
         };
@@ -57,7 +57,7 @@ const createAuthMiddleware = (...allowedRoles: Role[]) => {
           const verifiedToken = jwtUtils.verifyToken(accessToken, env.ACCESS_TOKEN_SECRET);
           if (verifiedToken.success && verifiedToken.data) {
             authenticatedUser = {
-              userId: verifiedToken.data.userId,
+              id: verifiedToken.data.userId,
               role: (verifiedToken.data as any).role as Role,
               email: (verifiedToken.data as any).email,
             };

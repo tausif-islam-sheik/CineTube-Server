@@ -1,6 +1,7 @@
 model Review {
   id        String       @id @default(uuid())
   rating    Int
+  title     String
   content   String
   tags      String[]
   spoiler   Boolean      @default(false)

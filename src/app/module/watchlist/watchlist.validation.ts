@@ -23,7 +23,7 @@ export const getWatchlistQuerySchema = z.object({
 });
 
 export const checkWatchlistSchema = z.object({
-  params: z.object({
+  query: z.object({
     movieId: z.string().uuid('Invalid movie ID'),
   }),
 });

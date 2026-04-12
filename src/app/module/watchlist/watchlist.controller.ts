@@ -15,7 +15,7 @@ export class WatchlistController {
    * Add a movie to watchlist
    */
   addToWatchlist = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const body = addToWatchlistSchema.parse(req.body);
+    const { body } = addToWatchlistSchema.parse({ body: req.body || {} });
     const userId = req.user?.id;
 
     const result = await watchlistService.addToWatchlist(userId, body.movieId);
@@ -32,7 +32,7 @@ export class WatchlistController {
    * Remove a movie from watchlist
    */
   removeFromWatchlist = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const params = removeFromWatchlistSchema.parse(req.params);
+    const { params } = removeFromWatchlistSchema.parse({ params: req.params || {} });
     const userId = req.user?.id;
 
     const result = await watchlistService.removeFromWatchlist(params.id, userId);
@@ -49,7 +49,7 @@ export class WatchlistController {
    * Get user's watchlist
    */
   getUserWatchlist = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const query = getWatchlistQuerySchema.parse(req.query);
+    const { query } = getWatchlistQuerySchema.parse({ query: req.query || {} });
     const userId = req.user?.id;
 
     const result = await watchlistService.getUserWatchlist(
@@ -73,7 +73,7 @@ export class WatchlistController {
    * Check if a movie is in user's watchlist
    */
   checkIfInWatchlist = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const query = checkWatchlistSchema.parse(req.query);
+    const { query } = checkWatchlistSchema.parse({ query: req.query || {} });
     const userId = req.user?.id;
 
     const inWatchlist = await watchlistService.checkIfInWatchlist(userId, query.movieId);
