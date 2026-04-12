@@ -9,6 +9,7 @@ import {
   getPaymentsQuerySchema,
 } from './payments.validation';
 import { AuthenticatedRequest } from '../auth/auth.interface';
+import AppError from '../../errorHelpers/AppError';
 
 export class PaymentController {
   /**
@@ -24,6 +25,27 @@ export class PaymentController {
       httpStatusCode: 201,
       success: true,
       message: 'Payment intent created successfully',
+      data: result,
+    });
+  });
+
+  /**
+   * Create a checkout session
+   */
+  createCheckoutSession = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const { tierId, interval } = req.body;
+    const userId = req.user?.id;
+
+    if (!tierId) {
+      throw new AppError(400, 'Tier ID is required');
+    }
+
+    const result = await paymentService.createCheckoutSession(userId!, tierId, interval);
+
+    return sendResponse(res, {
+      httpStatusCode: 200,
+      success: true,
+      message: 'Checkout session created successfully',
       data: result,
     });
   });
@@ -140,7 +162,7 @@ export class PaymentController {
       });
     }
 
-    const event = paymentService.validatePaymentWebhook(req.body, signature);
+    const event = await paymentService.validatePaymentWebhook(req.body, signature);
 
     switch (event.type) {
       case 'payment_intent.succeeded':
@@ -149,6 +171,20 @@ export class PaymentController {
 
       case 'payment_intent.payment_failed':
         await paymentService.handlePaymentFailure(event.data.object.id);
+        break;
+
+      case 'checkout.session.completed':
+        await paymentService.fulfillSubscription(event.data.object);
+        break;
+
+      // Common Stripe noise for Checkout/subscriptions; fulfillment uses checkout.session.completed
+      case 'charge.succeeded':
+      case 'charge.updated':
+      case 'payment_intent.created':
+      case 'customer.subscription.created':
+      case 'customer.subscription.updated':
+      case 'invoice.paid':
+      case 'invoice.payment_succeeded':
         break;
 
       default:

@@ -9,7 +9,7 @@ import {
   ResolveFlagInput,
 } from './moderation.validation';
 import { IModerationService } from './moderation.interface';
-import { ReviewStatus } from '../../../generated/prisma/enums';
+import { ReviewStatus } from '../../../generated/prisma';
 
 export class ModerationService implements IModerationService {
   /**

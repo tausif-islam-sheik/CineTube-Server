@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./prisma";
-import { Role, UserStatus } from "../../generated/prisma/enums";
+import { Role, UserStatus } from "../../generated/prisma";
 
 export const auth = betterAuth({
   baseURL: "http://localhost:5000",

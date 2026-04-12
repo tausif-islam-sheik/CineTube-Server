@@ -9,7 +9,8 @@ import {
   UpdateSubscriptionTierInput,
 } from './subscriptions.validation';
 import { ISubscriptionService } from './subscriptions.interface';
-import { SubscriptionStatus } from '../../../generated/prisma/enums';
+import { SubscriptionStatus, SubscriptionTierName } from '../../../generated/prisma';
+import { upsertDefaultSubscriptionTiers } from '../../utils/subscriptionTierDefaults';
 
 export class SubscriptionService implements ISubscriptionService {
   /**
@@ -413,6 +414,19 @@ export class SubscriptionService implements ISubscriptionService {
     order: string = 'asc',
   ) {
     try {
+      const requiredNames: SubscriptionTierName[] = [
+        SubscriptionTierName.FREE,
+        SubscriptionTierName.PREMIUM,
+        SubscriptionTierName.VIP,
+      ];
+      const existingRequired = await prisma.subscriptionTier.findMany({
+        where: { name: { in: requiredNames } },
+        select: { name: true },
+      });
+      if (existingRequired.length < requiredNames.length) {
+        await upsertDefaultSubscriptionTiers();
+      }
+
       const skip = (page - 1) * limit;
 
       const whereClause: any = {};

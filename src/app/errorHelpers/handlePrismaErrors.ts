@@ -1,4 +1,4 @@
-import { Prisma } from "../../generated/prisma/client";
+import { Prisma } from "../../generated/prisma";
 
 export const handlePrismaClientKnownRequestError = (err: Prisma.PrismaClientKnownRequestError) => {
   // Handle known Prisma errors like unique constraint violations

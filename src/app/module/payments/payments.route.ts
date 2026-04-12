@@ -7,6 +7,7 @@ const router = Router();
 
 // Protected routes (require authentication)
 router.post('/payments/intent', requireAuth, paymentController.createPaymentIntent);
+router.post('/payments/checkout-session', requireAuth, paymentController.createCheckoutSession);
 router.post('/payments', requireAuth, paymentController.createPayment);
 router.get('/payments/:id', requireAuth, paymentController.getPayment);
 router.get('/user/payments', requireAuth, paymentController.getUserPayments);

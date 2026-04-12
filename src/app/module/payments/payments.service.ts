@@ -4,7 +4,7 @@ import { stripe, STRIPE_WEBHOOK_SECRET } from '../../lib/stripe';
 import AppError from '../../errorHelpers/AppError';
 import { CreatePaymentInput, CreatePaymentIntentInput } from './payments.validation';
 import { IPaymentService } from './payments.interface';
-import { PaymentStatus } from '../../../generated/prisma/enums';
+import { PaymentStatus, SubscriptionStatus } from '../../../generated/prisma';
 
 export class PaymentService implements IPaymentService {
   /**
@@ -39,6 +39,67 @@ export class PaymentService implements IPaymentService {
     } catch (error) {
       if (error instanceof AppError) throw error;
       throw new AppError(500, 'Failed to create payment intent');
+    }
+  }
+
+  /**
+   * Create a checkout session for subscriptions
+   */
+  async createCheckoutSession(userId: string, tierId: string, interval?: 'monthly' | 'yearly') {
+    try {
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user) throw new AppError(404, 'User not found');
+
+      const tier = await prisma.subscriptionTier.findUnique({ where: { id: tierId } });
+      if (!tier) throw new AppError(404, 'Subscription tier not found');
+
+      // Dynamic price mapping for PREMIUM tier
+      let price = tier.price;
+      let stripeInterval: 'month' | 'year' = tier.billingCycle === 12 ? 'year' : 'month';
+
+      if (tier.name === 'PREMIUM' && interval) {
+        if (interval === 'yearly') {
+          price = 79.99;
+          stripeInterval = 'year';
+        } else {
+          price = 9.99;
+          stripeInterval = 'month';
+        }
+      }
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: tier.currency || 'usd',
+              product_data: {
+                name: `${tier.displayName} (${interval === 'yearly' ? 'Yearly' : 'Monthly'})`,
+                description: tier.description || '',
+              },
+              unit_amount: Math.round(price * 100),
+              recurring: {
+                interval: stripeInterval,
+              },
+            },
+            quantity: 1,
+          },
+        ],
+        mode: 'subscription',
+        success_url: `${process.env.FRONTEND_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.FRONTEND_URL}/payment/cancel`,
+        customer_email: user.email,
+        metadata: {
+          userId,
+          tierId,
+          interval: interval || (tier.billingCycle === 12 ? 'yearly' : 'monthly'),
+        },
+      });
+
+      return { sessionId: session.id, url: session.url };
+    } catch (error: any) {
+      console.error('Stripe Checkout Error:', error);
+      throw new AppError(500, error.message || 'Failed to create checkout session');
     }
   }
 
@@ -256,8 +317,10 @@ export class PaymentService implements IPaymentService {
         where: { transactionId: paymentIntentId },
       });
 
+      // Checkout subscriptions record payment on checkout.session.completed (transactionId = session id).
+      // payment_intent.succeeded still fires for the underlying PI; no row keyed by PI id — skip quietly.
       if (!payment) {
-        throw new AppError(404, 'Payment not found');
+        return null;
       }
 
       const updated = await prisma.payment.update({
@@ -284,6 +347,59 @@ export class PaymentService implements IPaymentService {
   }
 
   /**
+   * Fulfill a subscription after successful checkout
+   */
+  async fulfillSubscription(session: any) {
+    const { userId, tierId, interval } = session.metadata;
+    if (!userId || !tierId) return;
+
+    const tier = await prisma.subscriptionTier.findUnique({ where: { id: tierId } });
+    if (!tier) return;
+
+    // Calculate end date
+    const endDate = new Date();
+    if (interval === 'yearly') {
+      endDate.setFullYear(endDate.getFullYear() + 1);
+    } else {
+      endDate.setMonth(endDate.getMonth() + 1);
+    }
+
+    await prisma.$transaction([
+      // Create or Update subscription
+      prisma.subscription.upsert({
+        where: { userId },
+        update: {
+          tierId,
+          status: SubscriptionStatus.ACTIVE,
+          startDate: new Date(),
+          endDate,
+          autoRenew: true,
+        },
+        create: {
+          userId,
+          tierId,
+          status: SubscriptionStatus.ACTIVE,
+          startDate: new Date(),
+          endDate,
+          autoRenew: true,
+        },
+      }),
+      // Create payment record
+      prisma.payment.create({
+        data: {
+          userId,
+          amount: tier.price,
+          currency: tier.currency || 'usd',
+          status: PaymentStatus.COMPLETED,
+          paymentMethod: 'STRIPE',
+          gateway: 'STRIPE',
+          transactionId: session.id,
+        },
+      }),
+    ]);
+  }
+
+  /**
    * Handle failed payment
    */
   async handlePaymentFailure(paymentIntentId: string) {
@@ -293,7 +409,7 @@ export class PaymentService implements IPaymentService {
       });
 
       if (!payment) {
-        throw new AppError(404, 'Payment not found');
+        return null;
       }
 
       const updated = await prisma.payment.update({
