@@ -74,6 +74,8 @@ export class MoviesService implements IMoviesService {
         page = 1,
         genre,
         releaseYear,
+        yearMin,
+        yearMax,
         pricing,
         minRating,
         maxRating,
@@ -115,15 +117,23 @@ export class MoviesService implements IMoviesService {
       }
 
       // Filter by genre (array contains)
-      if (genre) {
+      if (genre && genre.length > 0) {
         whereClause.genre = {
-          has: genre,
+          hasSome: genre,
         };
       }
 
       // Filter by release year
       if (releaseYear) {
         whereClause.releaseYear = releaseYear;
+      } else if (yearMin !== undefined || yearMax !== undefined) {
+        whereClause.releaseYear = {};
+        if (yearMin !== undefined) {
+          (whereClause.releaseYear as Prisma.IntFilter).gte = yearMin;
+        }
+        if (yearMax !== undefined) {
+          (whereClause.releaseYear as Prisma.IntFilter).lte = yearMax;
+        }
       }
 
       // Filter by pricing

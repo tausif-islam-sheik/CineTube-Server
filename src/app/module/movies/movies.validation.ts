@@ -45,8 +45,16 @@ export const getMoviesQuerySchema = z.object({
     page: z.coerce.number().int().min(1).default(1),
 
     // Filtering
-    genre: z.string().optional(),
+    genre: z
+      .union([z.string(), z.array(z.string())])
+      .optional()
+      .transform((value) => {
+        if (!value) return undefined;
+        return Array.isArray(value) ? value : [value];
+      }),
     releaseYear: z.coerce.number().int().min(1800).optional(),
+    yearMin: z.coerce.number().int().min(1800).optional(),
+    yearMax: z.coerce.number().int().min(1800).optional(),
     pricing: z.enum(['FREE', 'PREMIUM']).optional(),
     language: z.string().optional(),
     minRating: z.coerce.number().min(0).max(10).optional(),
