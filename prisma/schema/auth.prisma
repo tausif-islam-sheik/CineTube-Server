@@ -5,6 +5,9 @@ model User {
   email         String
   emailVerified Boolean   @default(false)
   image         String?
+  phone         String?
+  gender        String?
+  dateOfBirth   DateTime?
   role          Role       @default(USER)
   status        UserStatus @default(ACTIVE)
   createdAt     DateTime  @default(now())

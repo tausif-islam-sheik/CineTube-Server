@@ -10,6 +10,7 @@ import SubscriptionsRoutes from "../module/subscriptions/subscriptions.route";
 import ModerationRoutes from "../module/moderation/moderation.route";
 import AnalyticsRoutes from "../module/analytics/analytics.route";
 import AdminRoutes from "../module/admin/admin.route";
+import UserProfileRoutes from "../module/user-profile/user-profile.route";
 
 const router = Router();
 
@@ -24,5 +25,6 @@ router.use("/", SubscriptionsRoutes);
 router.use("/moderation", ModerationRoutes);
 router.use("/", AnalyticsRoutes);
 router.use("/", AdminRoutes);
+router.use("/", UserProfileRoutes);
 
 export const IndexRoutes = router;
