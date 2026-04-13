@@ -10,12 +10,12 @@ import {
 
 export class LikesController {
   /**
-   * Toggle like on a movie
+   * Toggle like on a review
    */
   static toggleLike = catchAsync(async (req: any, res: Response) => {
     const validatedData = createLikeSchema.parse({ body: req.body });
 
-    const result = await likesService.toggleLike(req.user.id, validatedData.body.movieId);
+    const result = await likesService.toggleLike(req.user.id, validatedData.body.reviewId);
 
     sendResponse(res, {
       httpStatusCode: 200,
@@ -50,12 +50,12 @@ export class LikesController {
   /**
    * Get likes for a specific movie
    */
-  static getMovieLikes = catchAsync(async (req: any, res: Response) => {
-    const { movieId } = req.params;
+  static getReviewLikes = catchAsync(async (req: any, res: Response) => {
+    const { reviewId } = req.params;
     const { limit = 10, page = 1 } = req.query;
 
-    const result = await likesService.getMovieLikes(
-      movieId,
+    const result = await likesService.getReviewLikes(
+      reviewId,
       parseInt(limit as string),
       parseInt(page as string),
     );
@@ -63,7 +63,7 @@ export class LikesController {
     sendResponse(res, {
       httpStatusCode: 200,
       success: true,
-      message: 'Movie likes retrieved successfully',
+      message: 'Review likes retrieved successfully',
       data: result.data,
       meta: {
         page: result.pagination.page,
@@ -75,19 +75,19 @@ export class LikesController {
   });
 
   /**
-   * Get likes count for a specific movie
+   * Get likes count for a specific review
    */
-  static getMovieLikesCount = catchAsync(async (req: any, res: Response) => {
-    const { movieId } = req.params;
+  static getReviewLikesCount = catchAsync(async (req: any, res: Response) => {
+    const { reviewId } = req.params;
 
-    const count = await likesService.getMovieLikesCount(movieId);
+    const count = await likesService.getReviewLikesCount(reviewId);
 
     sendResponse(res, {
       httpStatusCode: 200,
       success: true,
-      message: 'Movie likes count retrieved successfully',
+      message: 'Review likes count retrieved successfully',
       data: {
-        movieId,
+        reviewId,
         likesCount: count,
       },
     });

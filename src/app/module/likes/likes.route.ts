@@ -8,8 +8,8 @@ const router = Router();
  * Public routes (no auth required)
  */
 router.get('/likes', LikesController.getLikes);
-router.get('/movies/:movieId/likes', LikesController.getMovieLikes);
-router.get('/movies/:movieId/likes/count', LikesController.getMovieLikesCount);
+router.get('/reviews/:reviewId/likes', LikesController.getReviewLikes);
+router.get('/reviews/:reviewId/likes/count', LikesController.getReviewLikesCount);
 
 /**
  * Protected routes (authentication required)

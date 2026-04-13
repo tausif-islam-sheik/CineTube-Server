@@ -9,9 +9,9 @@ export interface PaginatedResult<T> {
 }
 
 export interface ILikesService {
-  toggleLike(userId: string, movieId: string): Promise<{ liked: boolean; like?: any }>;
+  toggleLike(userId: string, reviewId: string): Promise<{ liked: boolean; like?: any }>;
   getLikes(filters: any): Promise<PaginatedResult<any>>;
-  getMovieLikes(movieId: string, limit?: number, page?: number): Promise<PaginatedResult<any>>;
+  getReviewLikes(reviewId: string, limit?: number, page?: number): Promise<PaginatedResult<any>>;
   getUserLikes(userId: string, limit?: number, page?: number): Promise<PaginatedResult<any>>;
-  getMovieLikesCount(movieId: string): Promise<number>;
+  getReviewLikesCount(reviewId: string): Promise<number>;
 }

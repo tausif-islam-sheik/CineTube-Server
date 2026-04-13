@@ -3,13 +3,13 @@ import { z } from 'zod';
 
 export const createLikeSchema = z.object({
   body: z.object({
-    movieId: z.string().uuid('Invalid movie ID'),
+    reviewId: z.string().uuid('Invalid review ID'),
   }),
 });
 
 export const getLikesQuerySchema = z.object({
   query: z.object({
-    movieId: z.string().uuid().optional(),
+    reviewId: z.string().uuid().optional(),
     limit: z.coerce.number().int().min(1).max(100).default(10),
     page: z.coerce.number().int().min(1).default(1),
   }),

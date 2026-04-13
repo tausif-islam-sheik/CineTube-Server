@@ -39,6 +39,7 @@ export class ReviewsService implements IReviewsService {
           title: data.title,
           content: data.comment,
           spoiler: data.containsSpoiler ?? false,
+          tags: data.tags ?? [],
           status: 'PENDING',
         },
       });
@@ -58,6 +59,8 @@ export class ReviewsService implements IReviewsService {
       const {
         movieId,
         status,
+        tag,
+        spoiler,
         sortBy = 'createdAt',
         order = 'desc',
         limit = 10,
@@ -76,11 +79,23 @@ export class ReviewsService implements IReviewsService {
       if (status) {
         whereClause.status = status as any;
       }
+      if (typeof spoiler === 'boolean') {
+        whereClause.spoiler = spoiler;
+      }
+      if (tag) {
+        whereClause.tags = { has: tag };
+      }
 
       // Build orderBy
-      const orderBy: Prisma.ReviewOrderByWithRelationInput = {};
+      let orderBy: Prisma.ReviewOrderByWithRelationInput = {};
       if (sortBy === 'rating') {
         orderBy.rating = order as Prisma.SortOrder;
+      } else if (sortBy === 'likes') {
+        orderBy = {
+          likes: {
+            _count: order as Prisma.SortOrder,
+          },
+        };
       } else {
         orderBy.createdAt = order as Prisma.SortOrder;
       }
@@ -99,6 +114,11 @@ export class ReviewsService implements IReviewsService {
                 id: true,
                 email: true,
                 name: true,
+              },
+            },
+            _count: {
+              select: {
+                likes: true,
               },
             },
           },
@@ -136,6 +156,11 @@ export class ReviewsService implements IReviewsService {
               name: true,
             },
           },
+            _count: {
+              select: {
+                likes: true,
+              },
+            },
           movie: {
             select: {
               id: true,
@@ -169,6 +194,9 @@ export class ReviewsService implements IReviewsService {
       if (review.userId !== userId) {
         throw new AppError(403, 'You can only update your own reviews');
       }
+      if (review.status === 'APPROVED') {
+        throw new AppError(403, 'Published reviews cannot be edited');
+      }
 
       const updatedReview = await prisma.review.update({
         where: { id },
@@ -177,6 +205,7 @@ export class ReviewsService implements IReviewsService {
           title: data.title ?? review.title,
           content: data.comment ?? review.content,
           spoiler: data.containsSpoiler ?? review.spoiler,
+          tags: data.tags ?? review.tags,
           updatedAt: new Date(),
         },
       });
@@ -204,6 +233,9 @@ export class ReviewsService implements IReviewsService {
       // Check if user is the owner
       if (review.userId !== userId) {
         throw new AppError(403, 'You can only delete your own reviews');
+      }
+      if (review.status === 'APPROVED') {
+        throw new AppError(403, 'Published reviews cannot be deleted');
       }
 
       // Delete associated comments/likes first
@@ -259,6 +291,11 @@ export class ReviewsService implements IReviewsService {
                 id: true,
                 email: true,
                 name: true,
+              },
+            },
+            _count: {
+              select: {
+                likes: true,
               },
             },
           },

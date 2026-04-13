@@ -8,6 +8,7 @@ export const createReviewSchema = z.object({
     title: z.string().min(3, 'Title must be at least 3 characters').max(100),
     comment: z.string().min(10, 'Comment must be at least 10 characters').max(5000),
     containsSpoiler: z.boolean().default(false),
+    tags: z.array(z.string().trim().min(1).max(30)).max(8).default([]),
   }),
 });
 
@@ -17,6 +18,7 @@ export const updateReviewSchema = z.object({
     title: z.string().min(3).max(100).optional(),
     comment: z.string().min(10).max(5000).optional(),
     containsSpoiler: z.boolean().optional(),
+    tags: z.array(z.string().trim().min(1).max(30)).max(8).optional(),
   }),
 });
 
@@ -24,7 +26,12 @@ export const getReviewsQuerySchema = z.object({
   query: z.object({
     movieId: z.string().uuid().optional(),
     status: z.enum(['PENDING', 'APPROVED', 'REJECTED']).optional(),
-    sortBy: z.enum(['rating', 'createdAt']).default('createdAt'),
+    tag: z.string().trim().min(1).max(30).optional(),
+    spoiler: z
+      .enum(['true', 'false'])
+      .transform((value) => value === 'true')
+      .optional(),
+    sortBy: z.enum(['rating', 'createdAt', 'likes']).default('createdAt'),
     order: z.enum(['asc', 'desc']).default('desc'),
     limit: z.coerce.number().int().min(1).max(100).default(10),
     page: z.coerce.number().int().min(1).default(1),
