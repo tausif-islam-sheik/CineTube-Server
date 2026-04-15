@@ -7,6 +7,7 @@ import { notFound } from "./app/middleware/notFound";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./app/lib/auth";
 import { paymentController } from "./app/module/payments/payments.controller";
+import { env } from "./app/config/env";
 
 const app: Application = express();
 
@@ -19,7 +20,7 @@ app.post(
 );
 
 app.use(cors({
-  origin: "http://localhost:3000",
+  origin: env.FRONTEND_URL,
   credentials: true
 }));
 
