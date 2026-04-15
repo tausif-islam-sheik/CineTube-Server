@@ -13,6 +13,30 @@ import { ReviewStatus } from '../../../generated/prisma';
 
 export class ModerationService implements IModerationService {
   /**
+   * Recalculate and update movie's average rating
+   */
+  private async updateMovieRating(movieId: string) {
+    const result = await prisma.review.aggregate({
+      where: {
+        movieId,
+        status: 'APPROVED',
+      },
+      _avg: {
+        rating: true,
+      },
+    });
+
+    const avgRating = result._avg.rating || 0;
+
+    await prisma.movie.update({
+      where: { id: movieId },
+      data: {
+        averageRating: Math.round(avgRating * 10) / 10,
+      },
+    });
+  }
+
+  /**
    * Approve a pending review
    */
   async approveReview(id: string, adminId: string) {
@@ -44,6 +68,9 @@ export class ModerationService implements IModerationService {
 
       // Log moderation action
       await this.logModerationAction(adminId, 'APPROVED', 'REVIEW', id);
+
+      // Update movie average rating
+      await this.updateMovieRating(review.movieId);
 
       return approved;
     } catch (error) {
@@ -84,6 +111,9 @@ export class ModerationService implements IModerationService {
 
       // Log moderation action
       await this.logModerationAction(adminId, 'REJECTED', 'REVIEW', id, input.reason);
+
+      // Update movie average rating (in case an approved review was rejected)
+      await this.updateMovieRating(review.movieId);
 
       return rejected;
     } catch (error) {
@@ -244,7 +274,7 @@ export class ModerationService implements IModerationService {
       const pages = Math.ceil(total / limit);
 
       const combined = [
-        ...pendingReviews.map((r) => ({ type: 'COMMENT', data: r })),
+        ...pendingComments.map((r) => ({ type: 'COMMENT', data: r })),
         ...pendingReviews.map((r) => ({ type: 'REVIEW', data: r })),
       ];
 

@@ -6,6 +6,30 @@ import { IReviewsService } from './reviews.interface';
 
 export class ReviewsService implements IReviewsService {
   /**
+   * Recalculate and update movie's average rating
+   */
+  private async updateMovieRating(movieId: string) {
+    const result = await prisma.review.aggregate({
+      where: {
+        movieId,
+        status: 'APPROVED',
+      },
+      _avg: {
+        rating: true,
+      },
+    });
+
+    const avgRating = result._avg.rating || 0;
+
+    await prisma.movie.update({
+      where: { id: movieId },
+      data: {
+        averageRating: Math.round(avgRating * 10) / 10,
+      },
+    });
+  }
+
+  /**
    * Create a new review
    */
   async createReview(userId: string, data: CreateReviewInput) {
@@ -43,6 +67,9 @@ export class ReviewsService implements IReviewsService {
           status: 'PENDING',
         },
       });
+
+      // Update movie rating
+      await this.updateMovieRating(data.movieId);
 
       return review;
     } catch (error) {
@@ -114,6 +141,12 @@ export class ReviewsService implements IReviewsService {
                 id: true,
                 email: true,
                 name: true,
+              },
+            },
+            movie: {
+              select: {
+                id: true,
+                title: true,
               },
             },
             _count: {
@@ -206,13 +239,13 @@ export class ReviewsService implements IReviewsService {
           content: data.comment ?? review.content,
           spoiler: data.containsSpoiler ?? review.spoiler,
           tags: data.tags ?? review.tags,
-          updatedAt: new Date(),
         },
       });
 
       return updatedReview;
     } catch (error) {
       if (error instanceof AppError) throw error;
+      console.error('[UpdateReview Error]', error);
       throw new AppError(500, 'Failed to update review');
     }
   }
