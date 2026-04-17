@@ -5,15 +5,22 @@ import { Role, UserStatus } from "../../generated/prisma";
 import { env } from "../config/env";
 
 export const auth = betterAuth({
-  baseURL: env.FRONTEND_URL,
+  baseURL: env.BETTER_AUTH_URL,
   basePath: "/api/auth",
-  trustedOrigins: [env.FRONTEND_URL!],
+  trustedOrigins: [env.FRONTEND_URL!, env.BETTER_AUTH_URL!],
   database: prismaAdapter(prisma, {
     provider: "postgresql", // or "mysql", "postgresql", ...etc
   }),
 
   emailAndPassword: {
     enabled: true,
+  },
+
+  socialProviders: {
+    google: {
+      clientId: env.GOOGLE_CLIENT_ID,
+      clientSecret: env.GOOGLE_CLIENT_SECRET,
+    },
   },
 
   user: {

@@ -25,6 +25,9 @@ interface EnvConfig {
   // Ethereal Email (for development/testing)
   ETHEREAL_USER: string;
   ETHEREAL_PASS: string;
+  // OAuth Configuration
+  GOOGLE_CLIENT_ID: string;
+  GOOGLE_CLIENT_SECRET: string;
 }
 
 const loadEnvVariables = (): EnvConfig => {
@@ -43,6 +46,8 @@ const loadEnvVariables = (): EnvConfig => {
     "SMTP_USER",
     "SMTP_PASS",
     "SMTP_FROM",
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET",
   ];
 
   requireEnvVariable.forEach((variable) => {
@@ -72,6 +77,8 @@ const loadEnvVariables = (): EnvConfig => {
     SMTP_SECURE: process.env.SMTP_SECURE || "false",
     ETHEREAL_USER: process.env.ETHEREAL_USER || "",
     ETHEREAL_PASS: process.env.ETHEREAL_PASS || "",
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID as string,
+    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET as string,
   };
 };
 
