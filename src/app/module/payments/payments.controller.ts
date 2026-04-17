@@ -51,6 +51,26 @@ export class PaymentController {
   });
 
   /**
+   * Verify checkout session and fulfill subscription (fallback when webhook fails)
+   */
+  verifyCheckoutSession = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const { sessionId } = req.query;
+
+    if (!sessionId || typeof sessionId !== 'string') {
+      throw new AppError(400, 'Session ID is required');
+    }
+
+    const result = await paymentService.verifyAndFulfillCheckoutSession(sessionId);
+
+    return sendResponse(res, {
+      httpStatusCode: 200,
+      success: true,
+      message: 'Checkout session verified successfully',
+      data: result,
+    });
+  });
+
+  /**
    * Create a payment record
    */
   createPayment = catchAsync(async (req: AuthenticatedRequest, res: Response) => {

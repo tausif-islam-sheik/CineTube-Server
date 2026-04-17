@@ -351,10 +351,16 @@ export class PaymentService implements IPaymentService {
    */
   async fulfillSubscription(session: any) {
     const { userId, tierId, interval } = session.metadata;
-    if (!userId || !tierId) return;
+    if (!userId || !tierId) {
+      console.error('[PaymentService] Missing userId or tierId in session metadata:', session.metadata);
+      throw new AppError(400, 'Missing userId or tierId in session metadata');
+    }
 
     const tier = await prisma.subscriptionTier.findUnique({ where: { id: tierId } });
-    if (!tier) return;
+    if (!tier) {
+      console.error('[PaymentService] Subscription tier not found:', tierId);
+      throw new AppError(404, 'Subscription tier not found');
+    }
 
     // Calculate end date
     const endDate = new Date();
@@ -397,6 +403,78 @@ export class PaymentService implements IPaymentService {
         },
       }),
     ]);
+  }
+
+  /**
+   * Verify checkout session and fulfill subscription (fallback for webhook)
+   */
+  async verifyAndFulfillCheckoutSession(sessionId: string) {
+    try {
+      // Retrieve session from Stripe
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      
+      if (!session) {
+        throw new AppError(404, 'Checkout session not found');
+      }
+
+      // Check if payment was successful
+      if (session.payment_status !== 'paid') {
+        throw new AppError(400, `Payment status is ${session.payment_status}`);
+      }
+
+      const { userId, tierId } = session.metadata || {};
+      
+      if (!userId || !tierId) {
+        throw new AppError(400, 'Missing userId or tierId in session metadata');
+      }
+
+      // Check if subscription already exists
+      const existingSubscription = await prisma.subscription.findUnique({
+        where: { userId },
+      });
+
+      if (existingSubscription && existingSubscription.status === 'ACTIVE') {
+        return {
+          message: 'Subscription already active',
+          subscription: existingSubscription,
+        };
+      }
+
+      // Check if payment already recorded
+      const existingPayment = await prisma.payment.findFirst({
+        where: { transactionId: sessionId },
+      });
+
+      if (existingPayment) {
+        return {
+          message: 'Payment already recorded',
+          payment: existingPayment,
+        };
+      }
+
+      // Fulfill the subscription
+      await this.fulfillSubscription(session);
+
+      // Return the created subscription and payment
+      const subscription = await prisma.subscription.findUnique({
+        where: { userId },
+        include: { tier: true },
+      });
+
+      const payment = await prisma.payment.findFirst({
+        where: { transactionId: sessionId },
+      });
+
+      return {
+        message: 'Subscription activated successfully',
+        subscription,
+        payment,
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      console.error('[PaymentService] Failed to verify checkout session:', error);
+      throw new AppError(500, 'Failed to verify checkout session');
+    }
   }
 
   /**
