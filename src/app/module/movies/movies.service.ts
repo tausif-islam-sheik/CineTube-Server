@@ -88,7 +88,7 @@ export class MoviesService implements IMoviesService {
       const skip = (page - 1) * limit;
 
       // Build where clause dynamically
-      const whereClause: Prisma.MovieWhereInput = {
+      const whereClause: any = {
         isDeleted: false,
       };
 
@@ -129,10 +129,10 @@ export class MoviesService implements IMoviesService {
       } else if (yearMin !== undefined || yearMax !== undefined) {
         whereClause.releaseYear = {};
         if (yearMin !== undefined) {
-          (whereClause.releaseYear as Prisma.IntFilter).gte = yearMin;
+          (whereClause.releaseYear as any).gte = yearMin;
         }
         if (yearMax !== undefined) {
-          (whereClause.releaseYear as Prisma.IntFilter).lte = yearMax;
+          (whereClause.releaseYear as any).lte = yearMax;
         }
       }
 
@@ -165,15 +165,15 @@ export class MoviesService implements IMoviesService {
       }
 
       // Build orderBy
-      const orderBy: Prisma.MovieOrderByWithRelationInput = {};
+      const orderBy: any = {};
       if (sortBy === 'rating') {
-        orderBy.averageRating = order as Prisma.SortOrder;
+        orderBy.averageRating = order as any;
       } else if (sortBy === 'releaseYear') {
-        orderBy.releaseYear = order as Prisma.SortOrder;
+        orderBy.releaseYear = order as any;
       } else if (sortBy === 'title') {
-        orderBy.title = order as Prisma.SortOrder;
+        orderBy.title = order as any;
       } else {
-        orderBy.createdAt = order as Prisma.SortOrder;
+        orderBy.createdAt = order as any;
       }
 
       // Fetch total count and movies

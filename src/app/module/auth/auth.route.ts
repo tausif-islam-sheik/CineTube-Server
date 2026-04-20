@@ -12,4 +12,4 @@ router.post("/forgot-password", AuthController.forgotPassword);
 router.post("/reset-password", AuthController.resetPassword);
 router.post("/verify-email", AuthController.verifyEmail);
 
-export const AuthRoutes = router;
+export const AuthRoutes: Router = router;

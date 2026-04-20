@@ -9,8 +9,8 @@ import {
   UpdateSubscriptionTierInput,
 } from './subscriptions.validation';
 import { ISubscriptionService } from './subscriptions.interface';
-import { SubscriptionStatus, SubscriptionTierName } from '../../../generated/prisma';
 import { upsertDefaultSubscriptionTiers } from '../../utils/subscriptionTierDefaults';
+import { SubscriptionStatus, SubscriptionTierName } from '../../../generated/enums';
 
 export class SubscriptionService implements ISubscriptionService {
   /**
@@ -162,7 +162,7 @@ export class SubscriptionService implements ISubscriptionService {
           skip,
           take: limit,
           include: {
-            subscriptionTier: true,
+            tier: true,
             user: {
               select: {
                 id: true,

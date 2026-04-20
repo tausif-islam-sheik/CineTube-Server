@@ -11,6 +11,12 @@ interface IResponseData<T> {
     total: number;
     totalPages: number;
   };
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
 }
 
 export const sendResponse = <T>(

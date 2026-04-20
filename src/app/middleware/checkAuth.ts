@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextFunction, Request, Response } from "express";
 import status from "http-status";
-import { Role, UserStatus } from "../../generated/prisma";
 import { env } from "../config/env";
 import AppError from "../errorHelpers/AppError";
 import { prisma } from "../lib/prisma";
 import { CookieUtils } from "../utils/cookie";
 import { jwtUtils } from "../utils/jwt";
 import { auth } from "../lib/auth";
+import { Role, UserStatus } from "../../generated/enums";
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -36,11 +36,14 @@ const createAuthMiddleware = (...allowedRoles: Role[]) => {
 
         // Status checks
         if (
-          user.status === (UserStatus.BLOCKED as any) || 
+          user.status === (UserStatus.BLOCKED as any) ||
           user.status === (UserStatus.DELETED as any) ||
           (user as any).isDeleted
         ) {
-          throw new AppError(status.UNAUTHORIZED, "Unauthorized access! User is not active.");
+          throw new AppError(
+            status.UNAUTHORIZED,
+            "Unauthorized access! User is not active.",
+          );
         }
 
         authenticatedUser = {
@@ -54,7 +57,10 @@ const createAuthMiddleware = (...allowedRoles: Role[]) => {
       if (!authenticatedUser) {
         const accessToken = CookieUtils.getCookie(req, "accessToken");
         if (accessToken) {
-          const verifiedToken = jwtUtils.verifyToken(accessToken, env.ACCESS_TOKEN_SECRET);
+          const verifiedToken = jwtUtils.verifyToken(
+            accessToken,
+            env.ACCESS_TOKEN_SECRET,
+          );
           if (verifiedToken.success && verifiedToken.data) {
             authenticatedUser = {
               id: verifiedToken.data.userId,
@@ -74,7 +80,10 @@ const createAuthMiddleware = (...allowedRoles: Role[]) => {
       }
 
       // Role secondary check
-      if (allowedRoles.length > 0 && !allowedRoles.includes(authenticatedUser.role)) {
+      if (
+        allowedRoles.length > 0 &&
+        !allowedRoles.includes(authenticatedUser.role)
+      ) {
         throw new AppError(
           status.FORBIDDEN,
           "Forbidden access! You do not have permission to access this resource.",
@@ -83,7 +92,7 @@ const createAuthMiddleware = (...allowedRoles: Role[]) => {
 
       // Attach user to request
       (req as AuthenticatedRequest).user = authenticatedUser;
-      
+
       next();
     } catch (error: any) {
       next(error);

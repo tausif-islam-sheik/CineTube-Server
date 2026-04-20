@@ -100,7 +100,6 @@ export class AnalyticsService implements IAnalyticsService {
               select: {
                 reviews: true,
                 comments: true,
-                subscriptions: true,
               },
             },
           },
@@ -141,8 +140,6 @@ export class AnalyticsService implements IAnalyticsService {
             _count: {
               select: {
                 reviews: true,
-                comments: true,
-                likes: true,
                 watchlists: true,
               },
             },
@@ -264,7 +261,7 @@ export class AnalyticsService implements IAnalyticsService {
             },
           },
         }),
-        prisma.like.count({
+        (prisma.like as any).count({
           where: {
             createdAt: {
               gte: startDate,
@@ -272,13 +269,12 @@ export class AnalyticsService implements IAnalyticsService {
             },
           },
         }),
-        prisma.comment.count({
+        (prisma.comment as any).count({
           where: {
             createdAt: {
               gte: startDate,
               lte: endDate,
             },
-            isDeleted: false,
           },
         }),
         prisma.watchlist.count({
@@ -319,7 +315,6 @@ export class AnalyticsService implements IAnalyticsService {
           _count: {
             select: {
               reviews: true,
-              likes: true,
               watchlists: true,
             },
           },
@@ -355,7 +350,7 @@ export class AnalyticsService implements IAnalyticsService {
 
       // Group by date
       const groupedByDate: any = {};
-      userGrowth.forEach((user) => {
+      userGrowth.forEach((user: any) => {
         const dateKey = user.createdAt.toISOString().split('T')[0];
         groupedByDate[dateKey] = (groupedByDate[dateKey] || 0) + 1;
       });
@@ -397,14 +392,14 @@ export class AnalyticsService implements IAnalyticsService {
             },
           },
         }),
-        prisma.subscription.aggregate({
+        (prisma.subscription as any).aggregate({
           where: {
             createdAt: {
               gte: startDate,
               lte: endDate,
             },
           },
-          _sum: { id: true },
+          _count: { _all: true },
         }),
         prisma.payment.aggregate({
           where: {

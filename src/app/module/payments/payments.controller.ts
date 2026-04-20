@@ -19,6 +19,10 @@ export class PaymentController {
     const body = createPaymentIntentSchema.parse(req.body);
     const userId = req.user?.id;
 
+    if (!userId) {
+      throw new AppError(401, 'Authentication required');
+    }
+
     const result = await paymentService.createPaymentIntent(userId, body);
 
     return sendResponse(res, {
@@ -77,6 +81,10 @@ export class PaymentController {
     const body = createPaymentSchema.parse(req.body);
     const userId = req.user?.id;
 
+    if (!userId) {
+      throw new AppError(401, 'Authentication required');
+    }
+
     const result = await paymentService.createPayment(userId, body);
 
     return sendResponse(res, {
@@ -109,6 +117,10 @@ export class PaymentController {
   getUserPayments = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const query = getPaymentsQuerySchema.parse(req.query);
     const userId = req.user?.id;
+
+    if (!userId) {
+      throw new AppError(401, 'Authentication required');
+    }
 
     const result = await paymentService.getUserPayments(
       userId,
@@ -157,6 +169,10 @@ export class PaymentController {
   refundPayment = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
     const { reason } = req.body;
+
+    if (typeof id !== 'string') {
+      throw new AppError(400, 'Invalid payment ID');
+    }
 
     const result = await paymentService.refundPayment(id, reason);
 

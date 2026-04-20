@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { LikesController } from './likes.controller';
 import { requireAuth } from '../../middleware/checkAuth';
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * Public routes (no auth required)

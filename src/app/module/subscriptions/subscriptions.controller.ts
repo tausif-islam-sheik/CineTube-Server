@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { subscriptionService } from './subscriptions.service';
 import { catchAsync } from '../../shared/catchAsync';
 import { sendResponse } from '../../shared/sendResponse';
+import AppError from '../../errorHelpers/AppError';
 import {
   createSubscriptionSchema,
   updateSubscriptionSchema,
@@ -22,6 +23,9 @@ export class SubscriptionController {
     const body = createSubscriptionSchema.parse(req.body);
     const userId = req.user?.id;
 
+    if (!userId) {
+      throw new AppError(401, 'Authentication required');
+    }
     const result = await subscriptionService.createSubscription(userId, body);
 
     return sendResponse(res, {
@@ -54,6 +58,9 @@ export class SubscriptionController {
   getUserSubscription = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.id;
 
+    if (!userId) {
+      throw new AppError(401, 'Authentication required');
+    }
     const result = await subscriptionService.getUserSubscription(userId);
 
     return sendResponse(res, {
@@ -70,6 +77,10 @@ export class SubscriptionController {
   getUserSubscriptions = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const query = getSubscriptionsQuerySchema.parse(req.query);
     const userId = req.user?.id;
+
+    if (!userId) {
+      throw new AppError(401, 'Authentication required');
+    }
 
     const result = await subscriptionService.getUserSubscriptions(
       userId,
@@ -119,6 +130,9 @@ export class SubscriptionController {
     const params = updateSubscriptionSchema.parse({ ...req.body, id: req.params.id });
     const userId = req.user?.id;
 
+    if (!userId) {
+      throw new AppError(401, 'Authentication required');
+    }
     const result = await subscriptionService.updateSubscription(params.id, userId, params);
 
     return sendResponse(res, {
@@ -136,7 +150,10 @@ export class SubscriptionController {
     const params = cancelSubscriptionSchema.parse({ ...req.body, id: req.params.id });
     const userId = req.user?.id;
 
-    const result = await subscriptionService.cancelSubscription(params.id, userId, params);
+    if (!userId) {
+      throw new AppError(401, 'Authentication required');
+    }
+    const result = await subscriptionService.cancelSubscription(params.id, userId);
 
     return sendResponse(res, {
       httpStatusCode: 200,
@@ -150,18 +167,13 @@ export class SubscriptionController {
    * Check subscription access
    */
   checkSubscriptionAccess = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const { contentType } = req.query;
     const userId = req.user?.id;
 
-    if (!contentType || typeof contentType !== 'string') {
-      return sendResponse(res, {
-        httpStatusCode: 400,
-        success: false,
-        message: 'Content type is required',
-      });
+    if (!userId) {
+      throw new AppError(401, 'Authentication required');
     }
 
-    const result = await subscriptionService.checkSubscriptionAccess(userId, contentType);
+    const result = await subscriptionService.checkSubscriptionAccess(userId);
 
     return sendResponse(res, {
       httpStatusCode: 200,
@@ -214,7 +226,11 @@ export class SubscriptionController {
    * Get subscription tier by ID
    */
   getSubscriptionTier = catchAsync(async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+
+    if (!id || typeof id !== 'string') {
+      throw new AppError(400, 'Invalid subscription tier ID');
+    }
 
     const result = await subscriptionService.getSubscriptionTier(id);
 
@@ -246,7 +262,11 @@ export class SubscriptionController {
    * Delete subscription tier (admin only)
    */
   deleteSubscriptionTier = catchAsync(async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+
+    if (!id || typeof id !== 'string') {
+      throw new AppError(400, 'Invalid subscription tier ID');
+    }
 
     const result = await subscriptionService.deleteSubscriptionTier(id);
 

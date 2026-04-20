@@ -3,7 +3,7 @@ import { paymentController } from './payments.controller';
 import { requireAuth } from '../../middleware/checkAuth';
 import { checkRole } from '../../middleware/checkAuth';
 
-const router = Router();
+const router: Router = Router();
 
 // Protected routes (require authentication)
 router.post('/payments/intent', requireAuth, paymentController.createPaymentIntent);

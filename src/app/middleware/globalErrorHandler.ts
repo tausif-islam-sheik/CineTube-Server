@@ -3,7 +3,6 @@
 import { NextFunction, Request, Response } from "express";
 import status from "http-status";
 import z from "zod";
-import { Prisma } from "../../generated/prisma";
 import { env } from "../config/env";
 import AppError from "../errorHelpers/AppError";
 // import {

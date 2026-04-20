@@ -24,7 +24,7 @@ export class jwtUtils {
     secret: string,
     expiresIn: string | number = "15m"
   ): string {
-    return jwt.sign(payload, secret, { expiresIn });
+    return jwt.sign(payload, secret, { expiresIn: expiresIn as jwt.SignOptions["expiresIn"] });
   }
 
   /**

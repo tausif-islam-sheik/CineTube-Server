@@ -44,7 +44,7 @@ export class CommentsService implements ICommentsService {
       const skip = (page - 1) * limit;
 
       // Build where clause
-      const whereClause: Prisma.CommentWhereInput = {};
+      const whereClause: any = {};
       if (reviewId) {
         whereClause.reviewId = reviewId;
       }
@@ -107,7 +107,6 @@ export class CommentsService implements ICommentsService {
         where: { id },
         data: {
           content: data.content,
-          updatedAt: new Date(),
         },
       });
 

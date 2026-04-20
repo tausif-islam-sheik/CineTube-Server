@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { watchlistController } from './watchlist.controller';
 import { requireAuth } from '../../middleware/checkAuth';
 
-const router = Router();
+const router: Router = Router();
 
 // Protected routes (require authentication)
 router.post('/', requireAuth, watchlistController.addToWatchlist);

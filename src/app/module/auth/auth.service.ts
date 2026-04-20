@@ -3,12 +3,12 @@ import status from "http-status";
 import { auth } from "../../lib/auth";
 import { prisma } from "../../lib/prisma";
 import { ILoginUserPayload, IRegisterUserPayload } from "./auth.interface";
-import { UserStatus } from "../../../generated/prisma";
 import AppError from "../../errorHelpers/AppError";
 import { emailService } from "../../lib/email";
 import { env } from "../../config/env";
 import { jwtUtils } from "../../utils/jwt";
 import crypto from "crypto";
+import { UserStatus } from "../../../generated/enums";
 
 const register = async (payload: IRegisterUserPayload) => {
   const { name, email, password } = payload;

@@ -36,7 +36,7 @@ export const handlePaymentWebhookSchema = z.object({
       status: z.string(),
       amount: z.number(),
       currency: z.string(),
-      metadata: z.record(z.string()).optional(),
+      metadata: z.record(z.string(), z.string()).optional(),
     }),
   }),
 });

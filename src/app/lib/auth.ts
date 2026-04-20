@@ -1,13 +1,13 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./prisma";
-import { Role, UserStatus } from "../../generated/prisma";
 import { env } from "../config/env";
+import { oAuthProxy } from "better-auth/plugins";
+import { Role, UserStatus } from "../../generated/enums";
 
 export const auth = betterAuth({
-  baseURL: env.BETTER_AUTH_URL,
-  basePath: "/api/auth",
-  trustedOrigins: [env.FRONTEND_URL!, env.BETTER_AUTH_URL!],
+  baseURL: process.env.FRONTEND_URL,
+  trustedOrigins: [process.env.FRONTEND_URL!],
   database: prismaAdapter(prisma, {
     provider: "postgresql", // or "mysql", "postgresql", ...etc
   }),
@@ -50,4 +50,45 @@ export const auth = betterAuth({
       },
     },
   },
+
+  session: {
+    cookieCache: {
+      enabled: true,
+      maxAge: 5 * 60, // 5 minutes
+    },
+  },
+  advanced: {
+    cookiePrefix: "better-auth",
+    useSecureCookies: process.env.NODE_ENV === "production",
+    crossSubDomainCookies: {
+      enabled: false,
+    },
+    disableCSRFCheck: true, // Allow requests without Origin header (Postman, mobile apps, etc.)
+  },
+
+  // account: { skipStateCookieCheck: true }, // solved redirect issue
+  // advanced: {
+  //   cookies: {
+  //     session_token: {
+  //       name: "session_token", // Force this exact name
+  //       attributes: {
+  //         httpOnly: true,
+  //         secure: true,
+  //         sameSite: "none",
+  //         partitioned: true,
+  //       },
+  //     },
+  //     state: {
+  //       name: "session_token", // Force this exact name
+  //       attributes: {
+  //         httpOnly: true,
+  //         secure: true,
+  //         sameSite: "none",
+  //         partitioned: true,
+  //       },
+  //     },
+  //   },
+  // },
+
+  plugins: [oAuthProxy()],
 });

@@ -1,7 +1,6 @@
 import { prisma } from "../lib/prisma";
-import type { Prisma } from "../../../generated/prisma";
 
-const DEFAULT_SUBSCRIPTION_TIERS: Prisma.SubscriptionTierCreateInput[] = [
+const DEFAULT_SUBSCRIPTION_TIERS: any[] = [
   {
     name: "FREE",
     displayName: "Free Tier",

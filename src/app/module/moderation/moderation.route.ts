@@ -3,7 +3,7 @@ import { moderationController } from './moderation.controller';
 import { requireAuth } from '../../middleware/checkAuth';
 import { checkRole } from '../../middleware/checkAuth';
 
-const router = Router();
+const router: Router = Router();
 
 // Public routes (user can report content)
 router.post('/flags', requireAuth, moderationController.flagContent);

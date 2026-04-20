@@ -3,7 +3,7 @@ import { subscriptionController } from './subscriptions.controller';
 import { requireAuth } from '../../middleware/checkAuth';
 import { checkRole } from '../../middleware/checkAuth';
 
-const router = Router();
+const router: Router = Router();
 
 // Public routes
 router.get('/subscription-tiers', subscriptionController.getSubscriptionTiers);

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { analyticsController } from './analytics.controller';
 import { checkRole } from '../../middleware/checkAuth';
 
-const router = Router();
+const router: Router = Router();
 
 // All admin routes
 router.get('/analytics', checkRole('ADMIN'), analyticsController.getDashboard);

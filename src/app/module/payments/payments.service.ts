@@ -4,7 +4,7 @@ import { stripe, STRIPE_WEBHOOK_SECRET } from '../../lib/stripe';
 import AppError from '../../errorHelpers/AppError';
 import { CreatePaymentInput, CreatePaymentIntentInput } from './payments.validation';
 import { IPaymentService } from './payments.interface';
-import { PaymentStatus, SubscriptionStatus } from '../../../generated/prisma';
+import { PaymentStatus, SubscriptionStatus } from '../../../generated/enums';
 
 export class PaymentService implements IPaymentService {
   /**
@@ -134,7 +134,6 @@ export class PaymentService implements IPaymentService {
           currency: input.currency,
           status: PaymentStatus.PENDING,
           paymentMethod: input.method,
-          description: input.description,
           transactionId: input.paymentIntentId,
           gateway: 'STRIPE',
         },

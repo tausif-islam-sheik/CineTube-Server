@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { moderationService } from './moderation.service';
 import { catchAsync } from '../../shared/catchAsync';
 import { sendResponse } from '../../shared/sendResponse';
+import AppError from '../../errorHelpers/AppError';
 import {
   approveReviewSchema,
   rejectReviewSchema,
@@ -186,6 +187,14 @@ export class ModerationController {
     const flagId = Array.isArray(req.params.flagId) ? req.params.flagId[0] : req.params.flagId;
     const body = resolveFlagSchema.parse(req.body);
     const adminId = (req as AuthenticatedRequest).user?.id;
+
+    if (!flagId) {
+      throw new AppError(400, 'Flag ID is required');
+    }
+
+    if (!adminId) {
+      throw new AppError(401, 'Authentication required');
+    }
 
     const result = await moderationService.resolveFlag(flagId, adminId, { ...body, flagId });
 

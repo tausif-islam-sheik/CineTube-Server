@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { adminController } from './admin.controller';
 import { checkRole } from '../../middleware/checkAuth';
 
-const router = Router();
+const router: Router = Router();
 
 // All admin routes
 router.get('/admin/users', checkRole('ADMIN'), adminController.getAllUsers);

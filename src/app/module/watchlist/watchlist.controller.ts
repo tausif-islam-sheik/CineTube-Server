@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { watchlistService } from './watchlist.service';
 import { catchAsync } from '../../shared/catchAsync';
 import { sendResponse } from '../../shared/sendResponse';
+import AppError from '../../errorHelpers/AppError';
 import {
   addToWatchlistSchema,
   removeFromWatchlistSchema,
@@ -18,6 +19,9 @@ export class WatchlistController {
     const { body } = addToWatchlistSchema.parse({ body: req.body || {} });
     const userId = req.user?.id;
 
+    if (!userId) {
+      throw new AppError(401, 'Authentication required');
+    }
     const result = await watchlistService.addToWatchlist(userId, body.movieId);
 
     return sendResponse(res, {
@@ -35,6 +39,9 @@ export class WatchlistController {
     const { params } = removeFromWatchlistSchema.parse({ params: req.params || {} });
     const userId = req.user?.id;
 
+    if (!userId) {
+      throw new AppError(401, 'Authentication required');
+    }
     const result = await watchlistService.removeFromWatchlist(params.id, userId);
 
     return sendResponse(res, {
@@ -52,6 +59,9 @@ export class WatchlistController {
     const { query } = getWatchlistQuerySchema.parse({ query: req.query || {} });
     const userId = req.user?.id;
 
+    if (!userId) {
+      throw new AppError(401, 'Authentication required');
+    }
     const result = await watchlistService.getUserWatchlist(
       userId,
       query.limit,
@@ -76,6 +86,9 @@ export class WatchlistController {
     const { query } = checkWatchlistSchema.parse({ query: req.query || {} });
     const userId = req.user?.id;
 
+    if (!userId) {
+      throw new AppError(401, 'Authentication required');
+    }
     const inWatchlist = await watchlistService.checkIfInWatchlist(userId, query.movieId);
 
     return sendResponse(res, {
@@ -92,6 +105,9 @@ export class WatchlistController {
   getWatchlistCount = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.id;
 
+    if (!userId) {
+      throw new AppError(401, 'Authentication required');
+    }
     const count = await watchlistService.getWatchlistCount(userId);
 
     return sendResponse(res, {

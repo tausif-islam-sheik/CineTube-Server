@@ -99,11 +99,11 @@ export class WatchlistService implements IWatchlistService {
       const skip = (page - 1) * limit;
 
       // Build orderBy
-      const orderByObj: Prisma.WatchlistOrderByWithRelationInput = {};
+      const orderByObj: any = {};
       if (sortBy === 'title') {
-        orderByObj.movie = { title: order as Prisma.SortOrder };
+        orderByObj.movie = { title: order as any };
       } else {
-        orderByObj.createdAt = order as Prisma.SortOrder;
+        orderByObj.createdAt = order as any;
       }
 
       const [total, watchlist] = await Promise.all([

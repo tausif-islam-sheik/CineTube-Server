@@ -47,7 +47,6 @@ export class AdminService implements IAdminService {
             _count: {
               select: {
                 reviews: true,
-                subscriptions: true,
               },
             },
           },
@@ -85,8 +84,6 @@ export class AdminService implements IAdminService {
               comments: true,
               likes: true,
               watchlists: true,
-              subscriptions: true,
-              payments: true,
             },
           },
         },

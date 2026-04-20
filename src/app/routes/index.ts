@@ -27,4 +27,4 @@ router.use("/", AnalyticsRoutes);
 router.use("/", AdminRoutes);
 router.use("/", UserProfileRoutes);
 
-export const IndexRoutes = router;
+export const IndexRoutes: Router = router;

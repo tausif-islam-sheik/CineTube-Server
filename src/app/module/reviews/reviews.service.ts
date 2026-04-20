@@ -97,7 +97,7 @@ export class ReviewsService implements IReviewsService {
       const skip = (page - 1) * limit;
 
       // Build where clause
-      const whereClause: Prisma.ReviewWhereInput = {};
+      const whereClause: any = {};
 
       if (movieId) {
         whereClause.movieId = movieId;
@@ -114,17 +114,17 @@ export class ReviewsService implements IReviewsService {
       }
 
       // Build orderBy
-      let orderBy: Prisma.ReviewOrderByWithRelationInput = {};
+      let orderBy: any = {};
       if (sortBy === 'rating') {
-        orderBy.rating = order as Prisma.SortOrder;
+        orderBy.rating = order as any;
       } else if (sortBy === 'likes') {
         orderBy = {
           likes: {
-            _count: order as Prisma.SortOrder,
+            _count: order as any,
           },
         };
       } else {
-        orderBy.createdAt = order as Prisma.SortOrder;
+        orderBy.createdAt = order as any;
       }
 
       // Fetch data

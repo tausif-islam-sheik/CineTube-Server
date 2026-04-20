@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { CommentsController } from './comments.controller';
 import { requireAuth } from '../../middleware/checkAuth';
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * Public routes (no auth required)
