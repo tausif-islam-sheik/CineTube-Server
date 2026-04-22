@@ -57,38 +57,31 @@ export const auth = betterAuth({
       maxAge: 5 * 60, // 5 minutes
     },
   },
-  advanced: {
-    cookiePrefix: "better-auth",
-    useSecureCookies: process.env.NODE_ENV === "production",
-    crossSubDomainCookies: {
-      enabled: false,
-    },
-    disableCSRFCheck: true, // Allow requests without Origin header (Postman, mobile apps, etc.)
-  },
 
-  // account: { skipStateCookieCheck: true }, // solved redirect issue
-  // advanced: {
-  //   cookies: {
-  //     session_token: {
-  //       name: "session_token", // Force this exact name
-  //       attributes: {
-  //         httpOnly: true,
-  //         secure: true,
-  //         sameSite: "none",
-  //         partitioned: true,
-  //       },
-  //     },
-  //     state: {
-  //       name: "session_token", // Force this exact name
-  //       attributes: {
-  //         httpOnly: true,
-  //         secure: true,
-  //         sameSite: "none",
-  //         partitioned: true,
-  //       },
-  //     },
-  //   },
-  // },
+
+  account: { skipStateCookieCheck: true }, // solved redirect issue
+  advanced: {
+    cookies: {
+      session_token: {
+        name: "session_token", // Force this exact name
+        attributes: {
+          httpOnly: true,
+          secure: true,
+          sameSite: "none",
+          partitioned: true,
+        },
+      },
+      state: {
+        name: "session_token", // Force this exact name
+        attributes: {
+          httpOnly: true,
+          secure: true,
+          sameSite: "none",
+          partitioned: true,
+        },
+      },
+    },
+  },
 
   plugins: [oAuthProxy()],
 });

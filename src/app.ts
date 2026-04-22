@@ -19,12 +19,6 @@ app.post(
   paymentController.handleWebhook
 );
 
-// app.use(cors({
-//   origin: env.FRONTEND_URL,
-//   credentials: true
-// }));
-
-
 
 // Configure CORS to allow both production and Vercel preview deployments
 const allowedOrigins = [
@@ -56,9 +50,6 @@ app.use(
     exposedHeaders: ["Set-Cookie"],
   }),
 );
-
-
-
 
 
 app.use(express.json());
