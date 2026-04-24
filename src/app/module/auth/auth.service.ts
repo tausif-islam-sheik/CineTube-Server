@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import status from "http-status";
+import crypto from "crypto";
 import { auth } from "../../lib/auth";
 import { prisma } from "../../lib/prisma";
 import { ILoginUserPayload, IRegisterUserPayload } from "./auth.interface";
@@ -7,7 +8,6 @@ import AppError from "../../errorHelpers/AppError";
 import { emailService } from "../../lib/email";
 import { env } from "../../config/env";
 import { jwtUtils } from "../../utils/jwt";
-import crypto from "crypto";
 import { UserStatus } from "../../../generated/enums";
 
 const register = async (payload: IRegisterUserPayload) => {
@@ -56,37 +56,49 @@ const register = async (payload: IRegisterUserPayload) => {
 const logIn = async (payload: ILoginUserPayload) => {
   const { email, password } = payload;
 
-  const data = await auth.api.signInEmail({
-    body: {
-      email,
-      password,
+  // Get credential account with user
+  const credentialAccount = await prisma.account.findFirst({
+    where: {
+      providerId: "credential",
+      user: { email },
     },
+    include: { user: true },
   });
 
-  if (!data.user) {
+  if (!credentialAccount) {
     throw new AppError(status.UNAUTHORIZED, "Invalid email or password");
   }
 
-  if (data.user.status === UserStatus.BLOCKED) {
+  // Manually verify password using bcrypt
+  const bcrypt = await import("bcryptjs");
+  const isPasswordValid = bcrypt.compareSync(password, credentialAccount.password || "");
+
+  if (!isPasswordValid) {
+    throw new AppError(status.UNAUTHORIZED, "Invalid email or password");
+  }
+
+  const user = credentialAccount.user;
+
+  if (user.status === UserStatus.BLOCKED) {
     throw new AppError(status.FORBIDDEN, "User is blocked");
   }
 
-  if ((data.user as any).isDeleted) {
+  if ((user as any).isDeleted) {
     throw new AppError(status.NOT_FOUND, "User is deleted");
   }
 
   // Get the session token from database
   const latestSession = await prisma.session.findFirst({
-    where: { userId: data.user.id },
+    where: { userId: user.id },
     orderBy: { createdAt: "desc" },
   });
 
   // Generate JWT tokens
   const { accessToken, refreshToken } = jwtUtils.generateTokenPair(
     {
-      userId: data.user.id,
-      email: data.user.email,
-      role: (data.user as any).role,
+      userId: user.id,
+      email: user.email,
+      role: (user as any).role,
     },
     env.ACCESS_TOKEN_SECRET,
     env.REFRESH_TOKEN_SECRET
@@ -94,12 +106,12 @@ const logIn = async (payload: ILoginUserPayload) => {
 
   return {
     user: {
-      id: data.user.id,
-      email: data.user.email,
-      name: data.user.name,
-      role: (data.user as any).role,
-      status: (data.user as any).status,
-      emailVerified: data.user.emailVerified,
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: (user as any).role,
+      status: (user as any).status,
+      emailVerified: user.emailVerified,
     },
     sessionToken: latestSession?.token || null,
     accessToken,
@@ -172,26 +184,28 @@ const logout = async () => {
 };
 
 const forgotPassword = async (email: string) => {
-  // Check if user exists
-  const user = await prisma.user.findUnique({
-    where: { email },
-  });
-
-  if (!user) {
-    // Security: Don't reveal if user exists
-    return { message: "If an account exists, a password reset email has been sent" };
-  }
-
   try {
-    // Create a unique reset token using crypto
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      return { message: "If an account exists, a password reset email has been sent" };
+    }
+
+    // Generate reset token
     const resetToken = crypto.randomBytes(32).toString("hex");
-    const hashedToken = crypto
-      .createHash("sha256")
-      .update(resetToken)
-      .digest("hex");
+    const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
     const tokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-    // Store hashed token in Verification model
+    // Store token in database (using Verification model)
+    // First, delete any existing token for this email
+    await prisma.verification.deleteMany({
+      where: { identifier: `password-reset-${email}` },
+    });
+
+    // Create new token
     await prisma.verification.create({
       data: {
         id: crypto.randomUUID(),
@@ -201,74 +215,122 @@ const forgotPassword = async (email: string) => {
       },
     });
 
-    // Send reset email with unhashed token (can be sent in URL)
-    const resetLink = `${env.FRONTEND_URL}/reset-password?token=${resetToken}&email=${email}`;
-    await emailService.sendPasswordResetEmail({
+    // Create reset URL
+    const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+
+    // Send email using our service
+    const emailSent = await emailService.sendPasswordResetEmail({
       email: user.email,
       name: user.name || "User",
-      resetLink,
+      resetLink: resetUrl,
     });
+
+    if (!emailSent) {
+      console.error(`[forgotPassword] Failed to send email to: ${email}`);
+      throw new Error("Failed to send email");
+    }
 
     return { message: "If an account exists, a password reset email has been sent" };
   } catch (error) {
-    console.error("Error sending password reset email:", error);
-    throw new AppError(
-      status.INTERNAL_SERVER_ERROR,
-      "Failed to send password reset email"
-    );
+    console.error(`[forgotPassword] Error:`, error);
+    return { message: "If an account exists, a password reset email has been sent" };
   }
 };
 
-const resetPassword = async (
-  email: string,
-  resetToken: string,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _newPassword?: string
-) => {
-  // Note: _newPassword parameter is accepted for future implementation of password hashing.
-  // Current implementation validates the reset token.
-  // TODO: Implement password hashing when full password management is added
-  
-  // Validate user exists
-  const user = await prisma.user.findUnique({
-    where: { email },
-  });
-
-  if (!user) {
-    throw new AppError(status.NOT_FOUND, "User not found");
-  }
-
+const resetPassword = async (token: string, newPassword: string) => {
   try {
     // Hash the provided token to match stored hash
-    const hashedToken = crypto
-      .createHash("sha256")
-      .update(resetToken)
-      .digest("hex");
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
-    // Find and validate the verification token
-    const verification = await prisma.verification.findFirst({
+    // Find verification record with matching hashed token
+    const verifications = await prisma.verification.findMany({
       where: {
-        identifier: `password-reset-${email}`,
+        identifier: { startsWith: "password-reset-" },
         value: hashedToken,
       },
     });
 
-    if (!verification || verification.expiresAt < new Date()) {
+    const verification = verifications[0];
+
+    if (!verification) {
       throw new AppError(status.BAD_REQUEST, "Invalid or expired reset token");
     }
 
-    // Update password directly via Better Auth
-    // Note: Password update through Better Auth API is handled internally
-    // For now, we'll mark as token used and return success message
-    // In production, you'd integrate with password hashing at DB level
-    await prisma.verification.delete({
-      where: { id: verification.id },
+    // Check if token expired
+    if (verification.expiresAt < new Date()) {
+      await prisma.verification.delete({ where: { id: verification.id } });
+      throw new AppError(status.BAD_REQUEST, "Reset token has expired. Please request a new one.");
+    }
+
+    // Extract email from identifier (format: password-reset-{email})
+    const email = verification.identifier.replace("password-reset-", "");
+
+    // Get user
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      throw new AppError(status.NOT_FOUND, "User not found");
+    }
+
+    // Update password using Better Auth's credential provider
+    // Better Auth uses bcrypt with $2a$ prefix and salt rounds 10
+    const bcrypt = await import("bcryptjs");
+    // Use genSaltSync with 10 rounds
+    const salt = bcrypt.genSaltSync(10);
+    let hashedPassword = bcrypt.hashSync(newPassword, salt);
+    
+    // Convert $2b$ to $2a$ for Better Auth compatibility
+    // $2b$ is generated by bcrypt on newer Node.js versions
+    // but Better Auth's validator only accepts $2a$
+    if (hashedPassword.startsWith("$2b$")) {
+      hashedPassword = hashedPassword.replace("$2b$", "$2a$");
+    }
+    
+    // Find the credential account for this user
+    const account = await prisma.account.findFirst({
+      where: {
+        userId: user.id,
+        providerId: "credential",
+      },
     });
+
+    if (account) {
+      // Update existing account with new hashed password
+      await prisma.account.update({
+        where: { id: account.id },
+        data: { 
+          password: hashedPassword,
+          updatedAt: new Date(),
+        },
+      });
+    } else {
+      // Create new credential account if doesn't exist
+      const newAccountId = crypto.randomUUID();
+      await prisma.account.create({
+        data: {
+          id: newAccountId,
+          accountId: email,
+          providerId: "credential",
+          userId: user.id,
+          password: hashedPassword,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+    }
+
+    // Also update the updatedAt on the user
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { updatedAt: new Date() },
+    });
+
+    // Delete the used token
+    await prisma.verification.delete({ where: { id: verification.id } });
 
     return { message: "Password reset successfully. Please login with your new password." };
   } catch (error) {
     if (error instanceof AppError) throw error;
-    console.error("Error resetting password:", error);
+    console.error("[resetPassword] Error:", error);
     throw new AppError(status.INTERNAL_SERVER_ERROR, "Failed to reset password");
   }
 };

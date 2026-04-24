@@ -5,6 +5,7 @@ import { AuthService } from "./auth.service";
 import status from "http-status";
 import { AuthenticatedRequest } from "../../middleware/checkAuth";
 import { CookieUtils } from "../../utils/cookie";
+import { forgotPasswordSchema, resetPasswordSchema } from "./auth.validation";
 
 const register = catchAsync(async (req: Request, res: Response) => {
   const payload = req.body;
@@ -88,8 +89,8 @@ const logout = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
 });
 
 const forgotPassword = catchAsync(async (req: Request, res: Response) => {
-  const { email } = req.body;
-  const result = await AuthService.forgotPassword(email);
+  const validatedData = forgotPasswordSchema.parse({ body: req.body });
+  const result = await AuthService.forgotPassword(validatedData.body.email);
 
   sendResponse(res, {
     httpStatusCode: status.OK,
@@ -100,8 +101,11 @@ const forgotPassword = catchAsync(async (req: Request, res: Response) => {
 });
 
 const resetPassword = catchAsync(async (req: Request, res: Response) => {
-  const { email, resetToken, newPassword } = req.body;
-  const result = await AuthService.resetPassword(email, resetToken, newPassword);
+  const validatedData = resetPasswordSchema.parse({ body: req.body });
+  const result = await AuthService.resetPassword(
+    validatedData.body.token,
+    validatedData.body.newPassword
+  );
 
   sendResponse(res, {
     httpStatusCode: status.OK,

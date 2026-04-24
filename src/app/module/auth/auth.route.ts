@@ -1,15 +1,20 @@
 import { Router } from "express";
 import { AuthController } from "./auth.controller";
 import { requireAuth } from "../../middleware/checkAuth";
+import { passwordResetLimiter, authLimiter } from "../../middleware/rateLimiter";
 
 const router = Router();
 
-router.post("/register", AuthController.register);
-router.post("/login", AuthController.logIn);
+// Authentication routes with rate limiting
+router.post("/register", authLimiter, AuthController.register);
+router.post("/login", authLimiter, AuthController.logIn);
 router.post("/refresh", AuthController.refresh);
 router.post("/logout", requireAuth, AuthController.logout);
-router.post("/forgot-password", AuthController.forgotPassword);
-router.post("/reset-password", AuthController.resetPassword);
+
+// Password reset routes with strict rate limiting
+router.post("/forgot-password", passwordResetLimiter, AuthController.forgotPassword);
+router.post("/reset-password", passwordResetLimiter, AuthController.resetPassword);
+
 router.post("/verify-email", AuthController.verifyEmail);
 
 export const AuthRoutes: Router = router;

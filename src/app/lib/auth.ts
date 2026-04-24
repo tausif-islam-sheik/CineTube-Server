@@ -14,6 +14,8 @@ export const auth = betterAuth({
 
   emailAndPassword: {
     enabled: true,
+    // Note: Password reset is handled manually in auth.service.ts
+    // to avoid Better Auth's API limitations
   },
 
   socialProviders: {
