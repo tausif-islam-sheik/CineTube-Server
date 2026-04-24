@@ -339,59 +339,293 @@ class EmailService {
   generatePaymentReceiptTemplate(params: PaymentReceiptParams): string {
     return `
       <!DOCTYPE html>
-      <html>
+      <html lang="en">
         <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Payment Receipt - CineTube</title>
           <style>
-            body { font-family: Arial, sans-serif; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background-color: #28a745; color: white; padding: 20px; text-align: center; }
-            .content { padding: 20px; background-color: #f8f9fa; }
-            .receipt { background-color: white; padding: 20px; border: 1px solid #ddd; margin-top: 20px; }
-            .footer { text-align: center; color: #666; font-size: 12px; margin-top: 20px; }
-            table { width: 100%; margin-top: 20px; }
-            th { text-align: left; border-bottom: 2px solid #007bff; padding: 10px 0; }
-            td { padding: 10px 0; }
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+            
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            
+            body { 
+              font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+              line-height: 1.6;
+              color: #e0e0e0;
+              min-height: 100vh;
+            }
+            
+            .email-wrapper {
+              max-width: 600px;
+              margin: 40px auto;
+              background: linear-gradient(180deg, #1e1e2e 0%, #252538 100%);
+              border-radius: 16px;
+              overflow: hidden;
+              box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+              border: 1px solid rgba(229, 9, 20, 0.2);
+            }
+            
+            .header {
+              background: linear-gradient(135deg, #e50914 0%, #b20710 100%);
+              padding: 40px;
+              text-align: center;
+              position: relative;
+            }
+            
+            .header::after {
+              content: '';
+              position: absolute;
+              bottom: 0;
+              left: 0;
+              right: 0;
+              height: 4px;
+              background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            }
+            
+            .header-icon {
+              font-size: 48px;
+              margin-bottom: 16px;
+            }
+            
+            .header h1 {
+              color: #ffffff;
+              font-size: 28px;
+              font-weight: 700;
+              letter-spacing: -0.5px;
+            }
+            
+            .header .subtitle {
+              color: rgba(255, 255, 255, 0.9);
+              font-size: 14px;
+              margin-top: 8px;
+              font-weight: 500;
+            }
+            
+            .content {
+              padding: 40px;
+            }
+            
+            .greeting {
+              font-size: 18px;
+              font-weight: 600;
+              color: #ffffff;
+              margin-bottom: 12px;
+            }
+            
+            .message {
+              font-size: 15px;
+              color: #a0a0b0;
+              line-height: 1.8;
+              margin-bottom: 28px;
+            }
+            
+            .receipt-box {
+              background: linear-gradient(180deg, #2a2a3e 0%, #32324a 100%);
+              border-radius: 12px;
+              padding: 28px;
+              margin-bottom: 24px;
+              border: 1px solid rgba(229, 9, 20, 0.15);
+            }
+            
+            .receipt-title {
+              font-size: 18px;
+              font-weight: 600;
+              color: #ffffff;
+              margin-bottom: 20px;
+              display: flex;
+              align-items: center;
+              gap: 8px;
+            }
+            
+            .receipt-row {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 12px 0;
+              border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            }
+            
+            .receipt-row:last-child {
+              border-bottom: none;
+            }
+            
+            .receipt-row.total {
+              background: rgba(229, 9, 20, 0.1);
+              margin: 0 -12px;
+              padding: 16px 12px;
+              border-radius: 8px;
+              border: 1px solid rgba(229, 9, 20, 0.2);
+            }
+            
+            .receipt-label {
+              font-size: 14px;
+              color: #a0a0b0;
+              font-weight: 500;
+            }
+            
+            .receipt-value {
+              font-size: 14px;
+              color: #ffffff;
+              font-weight: 500;
+              text-align: right;
+            }
+            
+            .receipt-row.total .receipt-label,
+            .receipt-row.total .receipt-value {
+              font-size: 16px;
+              font-weight: 700;
+              color: #ffffff;
+            }
+            
+            .amount-highlight {
+              color: #4ade80;
+              font-weight: 700;
+            }
+            
+            .transaction-id {
+              font-family: 'Courier New', monospace;
+              font-size: 12px;
+              color: #808090;
+              word-break: break-all;
+              background: rgba(0, 0, 0, 0.3);
+              padding: 8px 12px;
+              border-radius: 6px;
+              margin-top: 4px;
+            }
+            
+            .benefits {
+              background: linear-gradient(135deg, rgba(229, 9, 20, 0.1) 0%, rgba(229, 9, 20, 0.05) 100%);
+              border: 1px solid rgba(229, 9, 20, 0.2);
+              border-radius: 10px;
+              padding: 20px;
+              margin-top: 24px;
+            }
+            
+            .benefits-title {
+              font-size: 14px;
+              font-weight: 600;
+              color: #e50914;
+              margin-bottom: 12px;
+            }
+            
+            .benefits-list {
+              list-style: none;
+              font-size: 14px;
+              color: #c0c0d0;
+            }
+            
+            .benefits-list li {
+              padding: 4px 0;
+              padding-left: 20px;
+              position: relative;
+            }
+            
+            .benefits-list li::before {
+              content: '✓';
+              position: absolute;
+              left: 0;
+              color: #4ade80;
+              font-weight: 700;
+            }
+            
+            .footer {
+              background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+              padding: 32px 40px;
+              text-align: center;
+              border-top: 1px solid rgba(255, 255, 255, 0.05);
+            }
+            
+            .footer-brand {
+              font-size: 20px;
+              font-weight: 700;
+              color: #e50914;
+              margin-bottom: 8px;
+              letter-spacing: -0.5px;
+            }
+            
+            .footer-copy {
+              font-size: 12px;
+              color: #606070;
+              margin-bottom: 16px;
+            }
+            
+            .social-links {
+              display: flex;
+              justify-content: center;
+              gap: 20px;
+            }
+            
+            .social-links a {
+              color: #808090;
+              text-decoration: none;
+              font-size: 12px;
+              transition: color 0.2s;
+            }
+            
+            .social-links a:hover {
+              color: #e50914;
+            }
           </style>
         </head>
         <body>
-          <div class="container">
+          <div class="email-wrapper">
             <div class="header">
+              <div class="header-icon">🎬</div>
               <h1>Payment Successful!</h1>
+              <p class="subtitle">Welcome to Premium Streaming</p>
             </div>
+            
             <div class="content">
-              <p>Hi ${params.name},</p>
-              <p>Thank you for your payment. Your subscription has been activated.</p>
-              <div class="receipt">
-                <h3>Receipt Details</h3>
-                <table>
-                  <tr>
-                    <th>Description</th>
-                    <th>Amount</th>
-                  </tr>
-                  <tr>
-                    <td>${params.subscriptionTier} Subscription</td>
-                    <td>${params.currency} ${params.amount.toFixed(2)}</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Total</strong></td>
-                    <td><strong>${params.currency} ${params.amount.toFixed(2)}</strong></td>
-                  </tr>
-                  <tr>
-                    <td>Transaction ID</td>
-                    <td>${params.transactionId}</td>
-                  </tr>
-                  <tr>
-                    <td>Date</td>
-                    <td>${params.billingDate}</td>
-                  </tr>
-                </table>
+              <p class="greeting">Hi ${params.name},</p>
+              <p class="message">Thank you for your payment! Your ${params.subscriptionTier} subscription has been activated. Get ready to enjoy unlimited premium content.</p>
+              
+              <div class="receipt-box">
+                <div class="receipt-title">📄 Receipt Details</div>
+                
+                <div class="receipt-row">
+                  <span class="receipt-label">Plan</span>
+                  <span class="receipt-value">${params.subscriptionTier}</span>
+                </div>
+                
+                <div class="receipt-row">
+                  <span class="receipt-label">Billing Period</span>
+                  <span class="receipt-value">${params.billingDate}</span>
+                </div>
+                
+                <div class="receipt-row total">
+                  <span class="receipt-label">Total Paid</span>
+                  <span class="receipt-value amount-highlight">${params.currency} ${params.amount.toFixed(2)}</span>
+                </div>
+                
+                <div class="receipt-row" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1);">
+                  <span class="receipt-label">Transaction ID</span>
+                  <span class="receipt-value">
+                    <div class="transaction-id">${params.transactionId}</div>
+                  </span>
+                </div>
               </div>
-              <p style="color: #666; font-size: 14px; margin-top: 20px;">
-                You now have access to premium content. Enjoy streaming!
-              </p>
+              
+              <div class="benefits">
+                <div class="benefits-title">✨ Your Premium Benefits</div>
+                <ul class="benefits-list">
+                  <li>Ad-free streaming experience</li>
+                  <li>HD & 4K quality content</li>
+                  <li>Download for offline viewing</li>
+                  <li>Multiple device access</li>
+                </ul>
+              </div>
             </div>
+            
             <div class="footer">
-              <p>&copy; 2026 CineTube. All rights reserved.</p>
+              <p class="footer-brand">CineTube</p>
+              <p class="footer-copy">© 2026 CineTube. All rights reserved.</p>
+              <div class="social-links">
+                <a href="#">Support</a>
+                <a href="#">Privacy</a>
+                <a href="#">Terms</a>
+              </div>
             </div>
           </div>
         </body>

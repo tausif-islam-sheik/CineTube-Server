@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { prisma } from '../../lib/prisma';
 import { stripe, STRIPE_WEBHOOK_SECRET } from '../../lib/stripe';
+import { emailService } from '../../lib/email';
 import AppError from '../../errorHelpers/AppError';
 import { CreatePaymentInput, CreatePaymentIntentInput } from './payments.validation';
 import { IPaymentService } from './payments.interface';
@@ -361,6 +362,13 @@ export class PaymentService implements IPaymentService {
       throw new AppError(404, 'Subscription tier not found');
     }
 
+    // Get user info for email
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      console.error('[PaymentService] User not found:', userId);
+      throw new AppError(404, 'User not found');
+    }
+
     // Calculate end date
     const endDate = new Date();
     if (interval === 'yearly') {
@@ -402,6 +410,22 @@ export class PaymentService implements IPaymentService {
         },
       }),
     ]);
+
+    // Send invoice email
+    try {
+      await emailService.sendPaymentReceipt({
+        email: user.email,
+        name: user.name || 'User',
+        amount: tier.price,
+        currency: tier.currency || 'USD',
+        transactionId: session.id,
+        subscriptionTier: tier.displayName || tier.name,
+        billingDate: new Date().toLocaleDateString(),
+      });
+    } catch (error) {
+      console.error('[PaymentService] Failed to send invoice email:', error);
+      // Don't throw - subscription is already created
+    }
   }
 
   /**
