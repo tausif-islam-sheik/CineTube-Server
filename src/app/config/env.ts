@@ -27,6 +27,9 @@ interface EnvConfig {
   // OAuth Configuration
   GOOGLE_CLIENT_ID: string;
   GOOGLE_CLIENT_SECRET: string;
+  // Admin Seed Configuration
+  ADMIN_EMAIL: string;
+  ADMIN_PASSWORD: string;
 }
 
 const loadEnvVariables = (): EnvConfig => {
@@ -46,6 +49,8 @@ const loadEnvVariables = (): EnvConfig => {
     "SMTP_FROM",
     "GOOGLE_CLIENT_ID",
     "GOOGLE_CLIENT_SECRET",
+    "ADMIN_EMAIL",
+    "ADMIN_PASSWORD",
   ];
 
   requireEnvVariable.forEach((variable) => {
@@ -76,6 +81,8 @@ const loadEnvVariables = (): EnvConfig => {
     ETHEREAL_PASS: process.env.ETHEREAL_PASS || "",
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID as string,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET as string,
+    ADMIN_EMAIL: process.env.ADMIN_EMAIL as string,
+    ADMIN_PASSWORD: process.env.ADMIN_PASSWORD as string,
   };
 };
 

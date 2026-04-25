@@ -4,6 +4,7 @@ import { prisma } from "./prisma";
 import { env } from "../config/env";
 import { oAuthProxy } from "better-auth/plugins";
 import { Role, UserStatus } from "../../generated/enums";
+import bcrypt from "bcryptjs";
 
 export const auth = betterAuth({
   baseURL: process.env.FRONTEND_URL,
@@ -14,6 +15,19 @@ export const auth = betterAuth({
 
   emailAndPassword: {
     enabled: true,
+    password: {
+      hash: async (password: string) => {
+        const salt = await bcrypt.genSalt(10);
+        const hashed = await bcrypt.hash(password, salt);
+        // Better Auth expects $2a$ format, bcryptjs might produce $2b$
+        return hashed.replace("$2b$", "$2a$");
+      },
+      verify: async ({ hash, password }: { hash: string; password: string }) => {
+        // Normalize hash format for comparison
+        const normalizedHash = hash.replace("$2b$", "$2a$");
+        return bcrypt.compare(password, normalizedHash);
+      },
+    },
     // Note: Password reset is handled manually in auth.service.ts
     // to avoid Better Auth's API limitations
   },
@@ -54,9 +68,11 @@ export const auth = betterAuth({
   },
 
   session: {
+    expiresIn: 60 * 60 * 60 * 24, // 1 day in seconds
+    updateAge: 60 * 60 * 60 * 24, // 1 day in seconds
     cookieCache: {
       enabled: true,
-      maxAge: 5 * 60, // 5 minutes
+      maxAge: 60 * 60 * 60 * 24, // 1 day in seconds
     },
   },
 
@@ -68,18 +84,18 @@ export const auth = betterAuth({
         name: "session_token", // Force this exact name
         attributes: {
           httpOnly: true,
-          secure: true,
-          sameSite: "none",
-          partitioned: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+          partitioned: process.env.NODE_ENV === "production",
         },
       },
       state: {
         name: "session_token", // Force this exact name
         attributes: {
           httpOnly: true,
-          secure: true,
-          sameSite: "none",
-          partitioned: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+          partitioned: process.env.NODE_ENV === "production",
         },
       },
     },

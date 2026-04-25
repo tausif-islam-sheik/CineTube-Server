@@ -40,6 +40,7 @@ var sendResponse = (res, responseData) => {
 
 // src/app/module/auth/auth.service.ts
 import status2 from "http-status";
+import crypto from "crypto";
 
 // src/app/lib/auth.ts
 import { betterAuth } from "better-auth";
@@ -86,7 +87,9 @@ var loadEnvVariables = () => {
     "SMTP_PASS",
     "SMTP_FROM",
     "GOOGLE_CLIENT_ID",
-    "GOOGLE_CLIENT_SECRET"
+    "GOOGLE_CLIENT_SECRET",
+    "ADMIN_EMAIL",
+    "ADMIN_PASSWORD"
   ];
   requireEnvVariable.forEach((variable) => {
     if (!process.env[variable]) {
@@ -114,7 +117,9 @@ var loadEnvVariables = () => {
     ETHEREAL_USER: process.env.ETHEREAL_USER || "",
     ETHEREAL_PASS: process.env.ETHEREAL_PASS || "",
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
-    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET
+    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+    ADMIN_EMAIL: process.env.ADMIN_EMAIL,
+    ADMIN_PASSWORD: process.env.ADMIN_PASSWORD
   };
 };
 var env = loadEnvVariables();
@@ -224,6 +229,7 @@ var prisma = new PrismaClient({ adapter });
 
 // src/app/lib/auth.ts
 import { oAuthProxy } from "better-auth/plugins";
+import bcrypt from "bcryptjs";
 var auth = betterAuth({
   baseURL: process.env.FRONTEND_URL,
   trustedOrigins: [process.env.FRONTEND_URL],
@@ -232,7 +238,20 @@ var auth = betterAuth({
     // or "mysql", "postgresql", ...etc
   }),
   emailAndPassword: {
-    enabled: true
+    enabled: true,
+    password: {
+      hash: async (password) => {
+        const salt = await bcrypt.genSalt(10);
+        const hashed = await bcrypt.hash(password, salt);
+        return hashed.replace("$2b$", "$2a$");
+      },
+      verify: async ({ hash, password }) => {
+        const normalizedHash = hash.replace("$2b$", "$2a$");
+        return bcrypt.compare(password, normalizedHash);
+      }
+    }
+    // Note: Password reset is handled manually in auth.service.ts
+    // to avoid Better Auth's API limitations
   },
   socialProviders: {
     google: {
@@ -265,10 +284,14 @@ var auth = betterAuth({
     }
   },
   session: {
+    expiresIn: 60 * 60 * 60 * 24,
+    // 1 day in seconds
+    updateAge: 60 * 60 * 60 * 24,
+    // 1 day in seconds
     cookieCache: {
       enabled: true,
-      maxAge: 5 * 60
-      // 5 minutes
+      maxAge: 60 * 60 * 60 * 24
+      // 1 day in seconds
     }
   },
   account: { skipStateCookieCheck: true },
@@ -280,9 +303,9 @@ var auth = betterAuth({
         // Force this exact name
         attributes: {
           httpOnly: true,
-          secure: true,
-          sameSite: "none",
-          partitioned: true
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+          partitioned: process.env.NODE_ENV === "production"
         }
       },
       state: {
@@ -290,9 +313,9 @@ var auth = betterAuth({
         // Force this exact name
         attributes: {
           httpOnly: true,
-          secure: true,
-          sameSite: "none",
-          partitioned: true
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+          partitioned: process.env.NODE_ENV === "production"
         }
       }
     }
@@ -388,32 +411,212 @@ var EmailService = class {
   generatePasswordResetTemplate(params) {
     return `
       <!DOCTYPE html>
-      <html>
+      <html lang="en">
         <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Reset Your Password - CineTube</title>
           <style>
-            body { font-family: Arial, sans-serif; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background-color: #dc3545; color: white; padding: 20px; text-align: center; }
-            .content { padding: 20px; background-color: #f8f9fa; }
-            .button { display: inline-block; background-color: #dc3545; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 20px; }
-            .footer { text-align: center; color: #666; font-size: 12px; margin-top: 20px; }
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+            
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            
+            body { 
+              font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              background-color: #f5f5f5;
+              line-height: 1.6;
+              color: #333;
+            }
+            
+            .email-wrapper {
+              max-width: 600px;
+              margin: 40px auto;
+              background: #ffffff;
+              border-radius: 12px;
+              overflow: hidden;
+              box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+            }
+            
+            .header {
+              background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+              padding: 48px 40px;
+              text-align: center;
+            }
+            
+            .header h1 {
+              color: #ffffff;
+              font-size: 28px;
+              font-weight: 700;
+              letter-spacing: -0.5px;
+            }
+            
+            .header .subtitle {
+              color: #a0a0a0;
+              font-size: 14px;
+              margin-top: 8px;
+              font-weight: 400;
+            }
+            
+            .content {
+              padding: 48px 40px;
+              background: #ffffff;
+            }
+            
+            .greeting {
+              font-size: 18px;
+              font-weight: 600;
+              color: #1a1a2e;
+              margin-bottom: 16px;
+            }
+            
+            .message {
+              font-size: 15px;
+              color: #555;
+              line-height: 1.8;
+              margin-bottom: 32px;
+            }
+            
+            .button-container {
+              text-align: center;
+              margin: 32px 0;
+            }
+            
+            .button {
+              display: inline-block;
+              background: linear-gradient(135deg, #e50914 0%, #b20710 100%);
+              color: #ffffff !important;
+              font-size: 16px;
+              font-weight: 600;
+              padding: 16px 40px;
+              text-decoration: none;
+              border-radius: 8px;
+              box-shadow: 0 4px 16px rgba(229, 9, 20, 0.3);
+              transition: all 0.3s ease;
+            }
+            
+            .button:hover {
+              transform: translateY(-2px);
+              box-shadow: 0 6px 20px rgba(229, 9, 20, 0.4);
+            }
+            
+            .divider {
+              height: 1px;
+              background: linear-gradient(90deg, transparent, #e0e0e0, transparent);
+              margin: 32px 0;
+            }
+            
+            .security-notice {
+              background: #f8f9fa;
+              border-left: 4px solid #e50914;
+              padding: 20px 24px;
+              border-radius: 0 8px 8px 0;
+              margin-top: 24px;
+            }
+            
+            .security-notice h4 {
+              font-size: 14px;
+              font-weight: 600;
+              color: #1a1a2e;
+              margin-bottom: 8px;
+            }
+            
+            .security-notice p {
+              font-size: 13px;
+              color: #666;
+              margin: 0;
+            }
+            
+            .expiry-warning {
+              text-align: center;
+              font-size: 13px;
+              color: #888;
+              margin-top: 24px;
+              padding: 16px;
+              background: #fafafa;
+              border-radius: 6px;
+            }
+            
+            .footer {
+              background: #1a1a2e;
+              padding: 32px 40px;
+              text-align: center;
+            }
+            
+            .footer-brand {
+              color: #ffffff;
+              font-size: 20px;
+              font-weight: 700;
+              margin-bottom: 8px;
+            }
+            
+            .footer-copy {
+              color: #888;
+              font-size: 12px;
+            }
+            
+            .social-links {
+              margin-top: 20px;
+            }
+            
+            .social-links a {
+              display: inline-block;
+              margin: 0 12px;
+              color: #888;
+              text-decoration: none;
+              font-size: 12px;
+            }
+            
+            @media (max-width: 600px) {
+              .email-wrapper { margin: 0; border-radius: 0; }
+              .header, .content, .footer { padding: 32px 24px; }
+              .header h1 { font-size: 24px; }
+            }
           </style>
         </head>
         <body>
-          <div class="container">
+          <div class="email-wrapper">
             <div class="header">
-              <h1>Password Reset Request</h1>
+              <h1>Password Reset</h1>
+              <p class="subtitle">CineTube Security</p>
             </div>
+            
             <div class="content">
-              <p>Hi ${params.name},</p>
-              <p>We received a request to reset your password. Click the button below to create a new password.</p>
-              <a href="${params.resetLink}" class="button">Reset Password</a>
-              <p style="color: #666; font-size: 14px; margin-top: 20px;">
-                This link expires in 1 hour. If you didn't request this, please ignore this email.
+              <p class="greeting">Hi ${params.name},</p>
+              <p class="message">
+                We received a request to reset the password for your CineTube account. 
+                To proceed, please click the button below. This secure link will take you 
+                to our password reset page where you can create a new password.
               </p>
+              
+              <div class="button-container">
+                <a href="${params.resetLink}" class="button">Reset My Password</a>
+              </div>
+              
+              <div class="divider"></div>
+              
+              <p class="expiry-warning">
+                <strong>\u23F1 This link expires in 1 hour</strong><br>
+                For security reasons, this password reset link will expire shortly. 
+                If you need a new link, please visit the login page and request another reset.
+              </p>
+              
+              <div class="security-notice">
+                <h4>\u{1F512} Didn't request this reset?</h4>
+                <p>
+                  If you didn't make this request, your account is still secure. 
+                  No changes have been made to your password. You can safely ignore this email.
+                </p>
+              </div>
             </div>
+            
             <div class="footer">
-              <p>&copy; 2026 CineTube. All rights reserved.</p>
+              <p class="footer-brand">CineTube</p>
+              <p class="footer-copy">\xA9 2026 CineTube. All rights reserved.</p>
+              <div class="social-links">
+                <a href="#">Support</a>
+                <a href="#">Privacy</a>
+                <a href="#">Terms</a>
+              </div>
             </div>
           </div>
         </body>
@@ -423,59 +626,293 @@ var EmailService = class {
   generatePaymentReceiptTemplate(params) {
     return `
       <!DOCTYPE html>
-      <html>
+      <html lang="en">
         <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Payment Receipt - CineTube</title>
           <style>
-            body { font-family: Arial, sans-serif; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background-color: #28a745; color: white; padding: 20px; text-align: center; }
-            .content { padding: 20px; background-color: #f8f9fa; }
-            .receipt { background-color: white; padding: 20px; border: 1px solid #ddd; margin-top: 20px; }
-            .footer { text-align: center; color: #666; font-size: 12px; margin-top: 20px; }
-            table { width: 100%; margin-top: 20px; }
-            th { text-align: left; border-bottom: 2px solid #007bff; padding: 10px 0; }
-            td { padding: 10px 0; }
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+            
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            
+            body { 
+              font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+              line-height: 1.6;
+              color: #e0e0e0;
+              min-height: 100vh;
+            }
+            
+            .email-wrapper {
+              max-width: 600px;
+              margin: 40px auto;
+              background: linear-gradient(180deg, #1e1e2e 0%, #252538 100%);
+              border-radius: 16px;
+              overflow: hidden;
+              box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+              border: 1px solid rgba(229, 9, 20, 0.2);
+            }
+            
+            .header {
+              background: linear-gradient(135deg, #e50914 0%, #b20710 100%);
+              padding: 40px;
+              text-align: center;
+              position: relative;
+            }
+            
+            .header::after {
+              content: '';
+              position: absolute;
+              bottom: 0;
+              left: 0;
+              right: 0;
+              height: 4px;
+              background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            }
+            
+            .header-icon {
+              font-size: 48px;
+              margin-bottom: 16px;
+            }
+            
+            .header h1 {
+              color: #ffffff;
+              font-size: 28px;
+              font-weight: 700;
+              letter-spacing: -0.5px;
+            }
+            
+            .header .subtitle {
+              color: rgba(255, 255, 255, 0.9);
+              font-size: 14px;
+              margin-top: 8px;
+              font-weight: 500;
+            }
+            
+            .content {
+              padding: 40px;
+            }
+            
+            .greeting {
+              font-size: 18px;
+              font-weight: 600;
+              color: #ffffff;
+              margin-bottom: 12px;
+            }
+            
+            .message {
+              font-size: 15px;
+              color: #a0a0b0;
+              line-height: 1.8;
+              margin-bottom: 28px;
+            }
+            
+            .receipt-box {
+              background: linear-gradient(180deg, #2a2a3e 0%, #32324a 100%);
+              border-radius: 12px;
+              padding: 28px;
+              margin-bottom: 24px;
+              border: 1px solid rgba(229, 9, 20, 0.15);
+            }
+            
+            .receipt-title {
+              font-size: 18px;
+              font-weight: 600;
+              color: #ffffff;
+              margin-bottom: 20px;
+              display: flex;
+              align-items: center;
+              gap: 8px;
+            }
+            
+            .receipt-row {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 12px 0;
+              border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            }
+            
+            .receipt-row:last-child {
+              border-bottom: none;
+            }
+            
+            .receipt-row.total {
+              background: rgba(229, 9, 20, 0.1);
+              margin: 0 -12px;
+              padding: 16px 12px;
+              border-radius: 8px;
+              border: 1px solid rgba(229, 9, 20, 0.2);
+            }
+            
+            .receipt-label {
+              font-size: 14px;
+              color: #a0a0b0;
+              font-weight: 500;
+            }
+            
+            .receipt-value {
+              font-size: 14px;
+              color: #ffffff;
+              font-weight: 500;
+              text-align: right;
+            }
+            
+            .receipt-row.total .receipt-label,
+            .receipt-row.total .receipt-value {
+              font-size: 16px;
+              font-weight: 700;
+              color: #ffffff;
+            }
+            
+            .amount-highlight {
+              color: #4ade80;
+              font-weight: 700;
+            }
+            
+            .transaction-id {
+              font-family: 'Courier New', monospace;
+              font-size: 12px;
+              color: #808090;
+              word-break: break-all;
+              background: rgba(0, 0, 0, 0.3);
+              padding: 8px 12px;
+              border-radius: 6px;
+              margin-top: 4px;
+            }
+            
+            .benefits {
+              background: linear-gradient(135deg, rgba(229, 9, 20, 0.1) 0%, rgba(229, 9, 20, 0.05) 100%);
+              border: 1px solid rgba(229, 9, 20, 0.2);
+              border-radius: 10px;
+              padding: 20px;
+              margin-top: 24px;
+            }
+            
+            .benefits-title {
+              font-size: 14px;
+              font-weight: 600;
+              color: #e50914;
+              margin-bottom: 12px;
+            }
+            
+            .benefits-list {
+              list-style: none;
+              font-size: 14px;
+              color: #c0c0d0;
+            }
+            
+            .benefits-list li {
+              padding: 4px 0;
+              padding-left: 20px;
+              position: relative;
+            }
+            
+            .benefits-list li::before {
+              content: '\u2713';
+              position: absolute;
+              left: 0;
+              color: #4ade80;
+              font-weight: 700;
+            }
+            
+            .footer {
+              background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+              padding: 32px 40px;
+              text-align: center;
+              border-top: 1px solid rgba(255, 255, 255, 0.05);
+            }
+            
+            .footer-brand {
+              font-size: 20px;
+              font-weight: 700;
+              color: #e50914;
+              margin-bottom: 8px;
+              letter-spacing: -0.5px;
+            }
+            
+            .footer-copy {
+              font-size: 12px;
+              color: #606070;
+              margin-bottom: 16px;
+            }
+            
+            .social-links {
+              display: flex;
+              justify-content: center;
+              gap: 20px;
+            }
+            
+            .social-links a {
+              color: #808090;
+              text-decoration: none;
+              font-size: 12px;
+              transition: color 0.2s;
+            }
+            
+            .social-links a:hover {
+              color: #e50914;
+            }
           </style>
         </head>
         <body>
-          <div class="container">
+          <div class="email-wrapper">
             <div class="header">
+              <div class="header-icon">\u{1F3AC}</div>
               <h1>Payment Successful!</h1>
+              <p class="subtitle">Welcome to Premium Streaming</p>
             </div>
+            
             <div class="content">
-              <p>Hi ${params.name},</p>
-              <p>Thank you for your payment. Your subscription has been activated.</p>
-              <div class="receipt">
-                <h3>Receipt Details</h3>
-                <table>
-                  <tr>
-                    <th>Description</th>
-                    <th>Amount</th>
-                  </tr>
-                  <tr>
-                    <td>${params.subscriptionTier} Subscription</td>
-                    <td>${params.currency} ${params.amount.toFixed(2)}</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Total</strong></td>
-                    <td><strong>${params.currency} ${params.amount.toFixed(2)}</strong></td>
-                  </tr>
-                  <tr>
-                    <td>Transaction ID</td>
-                    <td>${params.transactionId}</td>
-                  </tr>
-                  <tr>
-                    <td>Date</td>
-                    <td>${params.billingDate}</td>
-                  </tr>
-                </table>
+              <p class="greeting">Hi ${params.name},</p>
+              <p class="message">Thank you for your payment! Your ${params.subscriptionTier} subscription has been activated. Get ready to enjoy unlimited premium content.</p>
+              
+              <div class="receipt-box">
+                <div class="receipt-title">\u{1F4C4} Receipt Details</div>
+                
+                <div class="receipt-row">
+                  <span class="receipt-label">Plan</span>
+                  <span class="receipt-value">${params.subscriptionTier}</span>
+                </div>
+                
+                <div class="receipt-row">
+                  <span class="receipt-label">Billing Period</span>
+                  <span class="receipt-value">${params.billingDate}</span>
+                </div>
+                
+                <div class="receipt-row total">
+                  <span class="receipt-label">Total Paid</span>
+                  <span class="receipt-value amount-highlight">${params.currency} ${params.amount.toFixed(2)}</span>
+                </div>
+                
+                <div class="receipt-row" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1);">
+                  <span class="receipt-label">Transaction ID</span>
+                  <span class="receipt-value">
+                    <div class="transaction-id">${params.transactionId}</div>
+                  </span>
+                </div>
               </div>
-              <p style="color: #666; font-size: 14px; margin-top: 20px;">
-                You now have access to premium content. Enjoy streaming!
-              </p>
+              
+              <div class="benefits">
+                <div class="benefits-title">\u2728 Your Premium Benefits</div>
+                <ul class="benefits-list">
+                  <li>Ad-free streaming experience</li>
+                  <li>HD & 4K quality content</li>
+                  <li>Download for offline viewing</li>
+                  <li>Multiple device access</li>
+                </ul>
+              </div>
             </div>
+            
             <div class="footer">
-              <p>&copy; 2026 CineTube. All rights reserved.</p>
+              <p class="footer-brand">CineTube</p>
+              <p class="footer-copy">\xA9 2026 CineTube. All rights reserved.</p>
+              <div class="social-links">
+                <a href="#">Support</a>
+                <a href="#">Privacy</a>
+                <a href="#">Terms</a>
+              </div>
             </div>
           </div>
         </body>
@@ -557,7 +994,6 @@ var jwtUtils = class {
 };
 
 // src/app/module/auth/auth.service.ts
-import crypto from "crypto";
 var register = async (payload) => {
   const { name, email, password } = payload;
   const data = await auth.api.signUpEmail({
@@ -595,44 +1031,53 @@ var register = async (payload) => {
     throw err;
   }
 };
-var logIn = async (payload) => {
+var logIn = async (payload, expressRes) => {
   const { email, password } = payload;
-  const data = await auth.api.signInEmail({
-    body: {
-      email,
-      password
-    }
+  const authResponse = await auth.api.signInEmail({
+    body: { email, password },
+    asResponse: true
   });
-  if (!data.user) {
+  if (!authResponse.ok) {
     throw new AppError_default(status2.UNAUTHORIZED, "Invalid email or password");
   }
-  if (data.user.status === UserStatus.BLOCKED) {
+  const setCookie = authResponse.headers.get("set-cookie");
+  if (setCookie) {
+    expressRes.setHeader("Set-Cookie", setCookie);
+  }
+  const authData = await authResponse.json();
+  const user = await prisma.user.findUnique({
+    where: { id: authData.user.id }
+  });
+  if (!user) {
+    throw new AppError_default(status2.NOT_FOUND, "User not found");
+  }
+  if (user.status === UserStatus.BLOCKED) {
     throw new AppError_default(status2.FORBIDDEN, "User is blocked");
   }
-  if (data.user.isDeleted) {
+  if (user.isDeleted) {
     throw new AppError_default(status2.NOT_FOUND, "User is deleted");
   }
-  const latestSession = await prisma.session.findFirst({
-    where: { userId: data.user.id },
-    orderBy: { createdAt: "desc" }
-  });
   const { accessToken, refreshToken: refreshToken2 } = jwtUtils.generateTokenPair(
     {
-      userId: data.user.id,
-      email: data.user.email,
-      role: data.user.role
+      userId: user.id,
+      email: user.email,
+      role: user.role
     },
     env.ACCESS_TOKEN_SECRET,
     env.REFRESH_TOKEN_SECRET
   );
+  const latestSession = await prisma.session.findFirst({
+    where: { userId: user.id },
+    orderBy: { createdAt: "desc" }
+  });
   return {
     user: {
-      id: data.user.id,
-      email: data.user.email,
-      name: data.user.name,
-      role: data.user.role,
-      status: data.user.status,
-      emailVerified: data.user.emailVerified
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      status: user.status,
+      emailVerified: user.emailVerified
     },
     sessionToken: latestSession?.token || null,
     accessToken,
@@ -688,16 +1133,19 @@ var logout = async () => {
   };
 };
 var forgotPassword = async (email) => {
-  const user = await prisma.user.findUnique({
-    where: { email }
-  });
-  if (!user) {
-    return { message: "If an account exists, a password reset email has been sent" };
-  }
   try {
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
+    if (!user) {
+      return { message: "If an account exists, a password reset email has been sent" };
+    }
     const resetToken = crypto.randomBytes(32).toString("hex");
     const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
     const tokenExpiry = new Date(Date.now() + 60 * 60 * 1e3);
+    await prisma.verification.deleteMany({
+      where: { identifier: `password-reset-${email}` }
+    });
     await prisma.verification.create({
       data: {
         id: crypto.randomUUID(),
@@ -706,46 +1154,87 @@ var forgotPassword = async (email) => {
         expiresAt: tokenExpiry
       }
     });
-    const resetLink = `${env.FRONTEND_URL}/reset-password?token=${resetToken}&email=${email}`;
-    await emailService.sendPasswordResetEmail({
+    const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+    const emailSent = await emailService.sendPasswordResetEmail({
       email: user.email,
       name: user.name || "User",
-      resetLink
+      resetLink: resetUrl
     });
+    if (!emailSent) {
+      console.error(`[forgotPassword] Failed to send email to: ${email}`);
+      throw new Error("Failed to send email");
+    }
     return { message: "If an account exists, a password reset email has been sent" };
   } catch (error) {
-    console.error("Error sending password reset email:", error);
-    throw new AppError_default(
-      status2.INTERNAL_SERVER_ERROR,
-      "Failed to send password reset email"
-    );
+    console.error(`[forgotPassword] Error:`, error);
+    return { message: "If an account exists, a password reset email has been sent" };
   }
 };
-var resetPassword = async (email, resetToken, _newPassword) => {
-  const user = await prisma.user.findUnique({
-    where: { email }
-  });
-  if (!user) {
-    throw new AppError_default(status2.NOT_FOUND, "User not found");
-  }
+var resetPassword = async (token, newPassword) => {
   try {
-    const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
-    const verification = await prisma.verification.findFirst({
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+    const verifications = await prisma.verification.findMany({
       where: {
-        identifier: `password-reset-${email}`,
+        identifier: { startsWith: "password-reset-" },
         value: hashedToken
       }
     });
-    if (!verification || verification.expiresAt < /* @__PURE__ */ new Date()) {
+    const verification = verifications[0];
+    if (!verification) {
       throw new AppError_default(status2.BAD_REQUEST, "Invalid or expired reset token");
     }
-    await prisma.verification.delete({
-      where: { id: verification.id }
+    if (verification.expiresAt < /* @__PURE__ */ new Date()) {
+      await prisma.verification.delete({ where: { id: verification.id } });
+      throw new AppError_default(status2.BAD_REQUEST, "Reset token has expired. Please request a new one.");
+    }
+    const email = verification.identifier.replace("password-reset-", "");
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      throw new AppError_default(status2.NOT_FOUND, "User not found");
+    }
+    const bcrypt2 = await import("bcryptjs");
+    const salt = bcrypt2.genSaltSync(10);
+    let hashedPassword = bcrypt2.hashSync(newPassword, salt);
+    if (hashedPassword.startsWith("$2b$")) {
+      hashedPassword = hashedPassword.replace("$2b$", "$2a$");
+    }
+    const account = await prisma.account.findFirst({
+      where: {
+        userId: user.id,
+        providerId: "credential"
+      }
     });
+    if (account) {
+      await prisma.account.update({
+        where: { id: account.id },
+        data: {
+          password: hashedPassword,
+          updatedAt: /* @__PURE__ */ new Date()
+        }
+      });
+    } else {
+      const newAccountId = crypto.randomUUID();
+      await prisma.account.create({
+        data: {
+          id: newAccountId,
+          accountId: email,
+          providerId: "credential",
+          userId: user.id,
+          password: hashedPassword,
+          createdAt: /* @__PURE__ */ new Date(),
+          updatedAt: /* @__PURE__ */ new Date()
+        }
+      });
+    }
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { updatedAt: /* @__PURE__ */ new Date() }
+    });
+    await prisma.verification.delete({ where: { id: verification.id } });
     return { message: "Password reset successfully. Please login with your new password." };
   } catch (error) {
     if (error instanceof AppError_default) throw error;
-    console.error("Error resetting password:", error);
+    console.error("[resetPassword] Error:", error);
     throw new AppError_default(status2.INTERNAL_SERVER_ERROR, "Failed to reset password");
   }
 };
@@ -815,6 +1304,23 @@ var CookieUtils = class {
   }
 };
 
+// src/app/module/auth/auth.validation.ts
+import { z } from "zod";
+var forgotPasswordSchema = z.object({
+  body: z.object({
+    email: z.string().email("Please provide a valid email address")
+  })
+});
+var resetPasswordSchema = z.object({
+  body: z.object({
+    token: z.string().min(1, "Reset token is required"),
+    newPassword: z.string().min(8, "Password must be at least 8 characters").max(128, "Password must not exceed 128 characters").regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+      "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
+    )
+  })
+});
+
 // src/app/module/auth/auth.controller.ts
 var register2 = catchAsync(async (req, res) => {
   const payload = req.body;
@@ -828,20 +1334,20 @@ var register2 = catchAsync(async (req, res) => {
 });
 var logIn2 = catchAsync(async (req, res) => {
   const payload = req.body;
-  const result = await AuthService.logIn(payload);
+  const result = await AuthService.logIn(payload, res);
   CookieUtils.setCookie(res, "accessToken", result.accessToken, {
     maxAge: 15 * 60 * 1e3,
     // 15 minutes
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict"
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
   });
   CookieUtils.setCookie(res, "refreshToken", result.refreshToken, {
     maxAge: 7 * 24 * 60 * 60 * 1e3,
     // 7 days
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict"
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
   });
   sendResponse(res, {
     httpStatusCode: status3.OK,
@@ -861,7 +1367,7 @@ var refresh = catchAsync(async (req, res) => {
     // 15 minutes
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict"
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
   });
   sendResponse(res, {
     httpStatusCode: status3.OK,
@@ -883,8 +1389,8 @@ var logout2 = catchAsync(async (req, res) => {
   });
 });
 var forgotPassword2 = catchAsync(async (req, res) => {
-  const { email } = req.body;
-  const result = await AuthService.forgotPassword(email);
+  const validatedData = forgotPasswordSchema.parse({ body: req.body });
+  const result = await AuthService.forgotPassword(validatedData.body.email);
   sendResponse(res, {
     httpStatusCode: status3.OK,
     success: true,
@@ -893,8 +1399,11 @@ var forgotPassword2 = catchAsync(async (req, res) => {
   });
 });
 var resetPassword2 = catchAsync(async (req, res) => {
-  const { email, resetToken, newPassword } = req.body;
-  const result = await AuthService.resetPassword(email, resetToken, newPassword);
+  const validatedData = resetPasswordSchema.parse({ body: req.body });
+  const result = await AuthService.resetPassword(
+    validatedData.body.token,
+    validatedData.body.newPassword
+  );
   sendResponse(res, {
     httpStatusCode: status3.OK,
     success: true,
@@ -988,14 +1497,67 @@ var checkRole = (...roles) => {
   return requireRole(...roles);
 };
 
+// src/app/middleware/rateLimiter.ts
+import rateLimit from "express-rate-limit";
+var passwordResetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1e3,
+  // 15 minutes
+  max: 3,
+  // 3 attempts per window
+  message: {
+    success: false,
+    message: "Too many password reset attempts. Please try again after 15 minutes."
+  },
+  standardHeaders: true,
+  // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false,
+  // Disable the `X-RateLimit-*` headers
+  skip: () => {
+    return process.env.NODE_ENV === "test";
+  }
+});
+var strictLimiter = rateLimit({
+  windowMs: 15 * 60 * 1e3,
+  // 15 minutes
+  max: 5,
+  message: {
+    success: false,
+    message: "Too many requests. Please try again after 15 minutes."
+  },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+var apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1e3,
+  // 15 minutes
+  max: 100,
+  message: {
+    success: false,
+    message: "Too many requests. Please try again later."
+  },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+var authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1e3,
+  // 15 minutes
+  max: 10,
+  message: {
+    success: false,
+    message: "Too many authentication attempts. Please try again after 15 minutes."
+  },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
 // src/app/module/auth/auth.route.ts
 var router = Router();
-router.post("/register", AuthController.register);
-router.post("/login", AuthController.logIn);
+router.post("/register", authLimiter, AuthController.register);
+router.post("/login", authLimiter, AuthController.logIn);
 router.post("/refresh", AuthController.refresh);
 router.post("/logout", requireAuth, AuthController.logout);
-router.post("/forgot-password", AuthController.forgotPassword);
-router.post("/reset-password", AuthController.resetPassword);
+router.post("/forgot-password", passwordResetLimiter, AuthController.forgotPassword);
+router.post("/reset-password", passwordResetLimiter, AuthController.resetPassword);
 router.post("/verify-email", AuthController.verifyEmail);
 var AuthRoutes = router;
 
@@ -1278,80 +1840,80 @@ var MoviesService = class {
 var moviesService = new MoviesService();
 
 // src/app/module/movies/movies.validation.ts
-import { z } from "zod";
-var createMovieSchema = z.object({
-  body: z.object({
-    title: z.string().min(1, "Title is required").max(255),
-    description: z.string().min(10, "Description must be at least 10 characters"),
-    genre: z.array(z.string()).min(1, "At least one genre is required"),
-    releaseYear: z.number().int().min(1800).max((/* @__PURE__ */ new Date()).getFullYear() + 5),
-    director: z.string().min(1),
-    cast: z.array(z.string()).default([]),
-    platform: z.string().min(1, "Platform is required"),
-    posterUrl: z.string().url("Invalid poster URL").optional(),
-    trailerUrl: z.string().url("Invalid trailer URL").optional(),
-    duration: z.number().int().min(1, "Duration must be at least 1 minute").optional(),
-    language: z.array(z.string()).default(["English"]),
-    pricing: z.enum(["FREE", "PREMIUM"]).default("PREMIUM"),
-    price: z.number().min(0).optional(),
-    youtubeLink: z.string().url("Invalid YouTube URL").optional()
+import { z as z2 } from "zod";
+var createMovieSchema = z2.object({
+  body: z2.object({
+    title: z2.string().min(1, "Title is required").max(255),
+    description: z2.string().min(10, "Description must be at least 10 characters"),
+    genre: z2.array(z2.string()).min(1, "At least one genre is required"),
+    releaseYear: z2.number().int().min(1800).max((/* @__PURE__ */ new Date()).getFullYear() + 5),
+    director: z2.string().min(1),
+    cast: z2.array(z2.string()).default([]),
+    platform: z2.string().min(1, "Platform is required"),
+    posterUrl: z2.string().url("Invalid poster URL").optional(),
+    trailerUrl: z2.string().url("Invalid trailer URL").optional(),
+    duration: z2.number().int().min(1, "Duration must be at least 1 minute").optional(),
+    language: z2.array(z2.string()).default(["English"]),
+    pricing: z2.enum(["FREE", "PREMIUM"]).default("PREMIUM"),
+    price: z2.number().min(0).optional(),
+    youtubeLink: z2.string().url("Invalid YouTube URL").optional()
   })
 });
-var updateMovieSchema = z.object({
-  body: z.object({
-    title: z.string().min(1).max(255).optional(),
-    description: z.string().min(10).optional(),
-    genre: z.array(z.string()).min(1).optional(),
-    releaseYear: z.number().int().min(1800).max((/* @__PURE__ */ new Date()).getFullYear() + 5).optional(),
-    director: z.string().min(1).optional(),
-    cast: z.array(z.string()).optional(),
-    platform: z.string().min(1).optional(),
-    posterUrl: z.string().url().optional().or(z.literal("")),
-    trailerUrl: z.string().url().optional().or(z.literal("")),
-    duration: z.number().int().min(1).optional(),
-    language: z.array(z.string()).optional(),
-    pricing: z.enum(["FREE", "PREMIUM"]).optional(),
-    price: z.number().min(0).optional(),
-    youtubeLink: z.string().url().optional().or(z.literal(""))
+var updateMovieSchema = z2.object({
+  body: z2.object({
+    title: z2.string().min(1).max(255).optional(),
+    description: z2.string().min(10).optional(),
+    genre: z2.array(z2.string()).min(1).optional(),
+    releaseYear: z2.number().int().min(1800).max((/* @__PURE__ */ new Date()).getFullYear() + 5).optional(),
+    director: z2.string().min(1).optional(),
+    cast: z2.array(z2.string()).optional(),
+    platform: z2.string().min(1).optional(),
+    posterUrl: z2.string().url().optional().or(z2.literal("")),
+    trailerUrl: z2.string().url().optional().or(z2.literal("")),
+    duration: z2.number().int().min(1).optional(),
+    language: z2.array(z2.string()).optional(),
+    pricing: z2.enum(["FREE", "PREMIUM"]).optional(),
+    price: z2.number().min(0).optional(),
+    youtubeLink: z2.string().url().optional().or(z2.literal(""))
   })
 });
-var getMoviesQuerySchema = z.object({
-  query: z.object({
+var getMoviesQuerySchema = z2.object({
+  query: z2.object({
     // Pagination
-    limit: z.coerce.number().int().min(1).max(100).default(10),
-    page: z.coerce.number().int().min(1).default(1),
+    limit: z2.coerce.number().int().min(1).max(100).default(10),
+    page: z2.coerce.number().int().min(1).default(1),
     // Filtering
-    genre: z.union([z.string(), z.array(z.string())]).optional().transform((value) => {
+    genre: z2.union([z2.string(), z2.array(z2.string())]).optional().transform((value) => {
       if (!value) return void 0;
       return Array.isArray(value) ? value : [value];
     }),
-    releaseYear: z.coerce.number().int().min(1800).optional(),
-    yearMin: z.coerce.number().int().min(1800).optional(),
-    yearMax: z.coerce.number().int().min(1800).optional(),
-    pricing: z.enum(["FREE", "PREMIUM"]).optional(),
-    language: z.string().optional(),
-    minRating: z.coerce.number().min(0).max(10).optional(),
-    maxRating: z.coerce.number().min(0).max(10).optional(),
+    releaseYear: z2.coerce.number().int().min(1800).optional(),
+    yearMin: z2.coerce.number().int().min(1800).optional(),
+    yearMax: z2.coerce.number().int().min(1800).optional(),
+    pricing: z2.enum(["FREE", "PREMIUM"]).optional(),
+    language: z2.string().optional(),
+    minRating: z2.coerce.number().min(0).max(10).optional(),
+    maxRating: z2.coerce.number().min(0).max(10).optional(),
     // Sorting
-    sortBy: z.enum(["rating", "releaseYear", "createdAt", "title"]).default("createdAt"),
-    order: z.enum(["asc", "desc"]).default("desc"),
+    sortBy: z2.enum(["rating", "releaseYear", "createdAt", "title"]).default("createdAt"),
+    order: z2.enum(["asc", "desc"]).default("desc"),
     // Search
-    search: z.string().optional()
+    search: z2.string().optional()
   })
 });
-var getMovieBySlugSchema = z.object({
-  params: z.object({
-    slug: z.string().min(1)
+var getMovieBySlugSchema = z2.object({
+  params: z2.object({
+    slug: z2.string().min(1)
   })
 });
-var deleteMovieSchema = z.object({
-  params: z.object({
-    id: z.string().uuid("Invalid movie ID")
+var deleteMovieSchema = z2.object({
+  params: z2.object({
+    id: z2.string().uuid("Invalid movie ID")
   })
 });
-var updateMovieParamsSchema = z.object({
-  params: z.object({
-    id: z.string().uuid("Invalid movie ID")
+var updateMovieParamsSchema = z2.object({
+  params: z2.object({
+    id: z2.string().uuid("Invalid movie ID")
   })
 });
 
@@ -1788,51 +2350,51 @@ var ReviewsService = class {
 var reviewsService = new ReviewsService();
 
 // src/app/module/reviews/reviews.validation.ts
-import { z as z2 } from "zod";
-var createReviewSchema = z2.object({
-  body: z2.object({
-    movieId: z2.string().uuid("Invalid movie ID"),
-    rating: z2.number().int().min(1, "Rating must be at least 1").max(10, "Rating cannot exceed 10"),
-    title: z2.string().min(3, "Title must be at least 3 characters").max(100),
-    comment: z2.string().min(10, "Comment must be at least 10 characters").max(5e3),
-    containsSpoiler: z2.boolean().default(false),
-    tags: z2.array(z2.string().trim().min(1).max(30)).max(8).default([])
+import { z as z3 } from "zod";
+var createReviewSchema = z3.object({
+  body: z3.object({
+    movieId: z3.string().uuid("Invalid movie ID"),
+    rating: z3.number().int().min(1, "Rating must be at least 1").max(10, "Rating cannot exceed 10"),
+    title: z3.string().min(3, "Title must be at least 3 characters").max(100),
+    comment: z3.string().min(10, "Comment must be at least 10 characters").max(5e3),
+    containsSpoiler: z3.boolean().default(false),
+    tags: z3.array(z3.string().trim().min(1).max(30)).max(8).default([])
   })
 });
-var updateReviewSchema = z2.object({
-  body: z2.object({
-    rating: z2.number().int().min(1).max(10).optional(),
-    title: z2.string().min(3).max(100).optional(),
-    comment: z2.string().min(10).max(5e3).optional(),
-    containsSpoiler: z2.boolean().optional(),
-    tags: z2.array(z2.string().trim().min(1).max(30)).max(8).optional()
+var updateReviewSchema = z3.object({
+  body: z3.object({
+    rating: z3.number().int().min(1).max(10).optional(),
+    title: z3.string().min(3).max(100).optional(),
+    comment: z3.string().min(10).max(5e3).optional(),
+    containsSpoiler: z3.boolean().optional(),
+    tags: z3.array(z3.string().trim().min(1).max(30)).max(8).optional()
   })
 });
-var getReviewsQuerySchema = z2.object({
-  query: z2.object({
-    movieId: z2.string().uuid().optional(),
-    status: z2.enum(["PENDING", "APPROVED", "REJECTED"]).optional(),
-    tag: z2.string().trim().min(1).max(30).optional(),
-    spoiler: z2.enum(["true", "false"]).transform((value) => value === "true").optional(),
-    sortBy: z2.enum(["rating", "createdAt", "likes"]).default("createdAt"),
-    order: z2.enum(["asc", "desc"]).default("desc"),
-    limit: z2.coerce.number().int().min(1).max(100).default(10),
-    page: z2.coerce.number().int().min(1).default(1)
+var getReviewsQuerySchema = z3.object({
+  query: z3.object({
+    movieId: z3.string().uuid().optional(),
+    status: z3.enum(["PENDING", "APPROVED", "REJECTED"]).optional(),
+    tag: z3.string().trim().min(1).max(30).optional(),
+    spoiler: z3.enum(["true", "false"]).transform((value) => value === "true").optional(),
+    sortBy: z3.enum(["rating", "createdAt", "likes"]).default("createdAt"),
+    order: z3.enum(["asc", "desc"]).default("desc"),
+    limit: z3.coerce.number().int().min(1).max(100).default(10),
+    page: z3.coerce.number().int().min(1).default(1)
   })
 });
-var getReviewByIdSchema = z2.object({
-  params: z2.object({
-    id: z2.string().uuid("Invalid review ID")
+var getReviewByIdSchema = z3.object({
+  params: z3.object({
+    id: z3.string().uuid("Invalid review ID")
   })
 });
-var deleteReviewSchema = z2.object({
-  params: z2.object({
-    id: z2.string().uuid("Invalid review ID")
+var deleteReviewSchema = z3.object({
+  params: z3.object({
+    id: z3.string().uuid("Invalid review ID")
   })
 });
-var updateReviewParamsSchema = z2.object({
-  params: z2.object({
-    id: z2.string().uuid("Invalid review ID")
+var updateReviewParamsSchema = z3.object({
+  params: z3.object({
+    id: z3.string().uuid("Invalid review ID")
   })
 });
 
@@ -2123,33 +2685,33 @@ var CommentsService = class {
 var commentsService = new CommentsService();
 
 // src/app/module/comments/comments.validation.ts
-import { z as z3 } from "zod";
-var createCommentSchema = z3.object({
-  body: z3.object({
-    reviewId: z3.string().uuid("Invalid review ID"),
-    content: z3.string().min(1, "Content is required").max(1e3)
+import { z as z4 } from "zod";
+var createCommentSchema = z4.object({
+  body: z4.object({
+    reviewId: z4.string().uuid("Invalid review ID"),
+    content: z4.string().min(1, "Content is required").max(1e3)
   })
 });
-var updateCommentSchema = z3.object({
-  body: z3.object({
-    content: z3.string().min(1).max(1e3)
+var updateCommentSchema = z4.object({
+  body: z4.object({
+    content: z4.string().min(1).max(1e3)
   })
 });
-var getCommentsQuerySchema = z3.object({
-  query: z3.object({
-    reviewId: z3.string().uuid().optional(),
-    limit: z3.coerce.number().int().min(1).max(100).default(10),
-    page: z3.coerce.number().int().min(1).default(1)
+var getCommentsQuerySchema = z4.object({
+  query: z4.object({
+    reviewId: z4.string().uuid().optional(),
+    limit: z4.coerce.number().int().min(1).max(100).default(10),
+    page: z4.coerce.number().int().min(1).default(1)
   })
 });
-var deleteCommentSchema = z3.object({
-  params: z3.object({
-    id: z3.string().uuid("Invalid comment ID")
+var deleteCommentSchema = z4.object({
+  params: z4.object({
+    id: z4.string().uuid("Invalid comment ID")
   })
 });
-var updateCommentParamsSchema = z3.object({
-  params: z3.object({
-    id: z3.string().uuid("Invalid comment ID")
+var updateCommentParamsSchema = z4.object({
+  params: z4.object({
+    id: z4.string().uuid("Invalid comment ID")
   })
 });
 
@@ -2395,22 +2957,22 @@ var LikesService = class {
 var likesService = new LikesService();
 
 // src/app/module/likes/likes.validation.ts
-import { z as z4 } from "zod";
-var createLikeSchema = z4.object({
-  body: z4.object({
-    reviewId: z4.string().uuid("Invalid review ID")
+import { z as z5 } from "zod";
+var createLikeSchema = z5.object({
+  body: z5.object({
+    reviewId: z5.string().uuid("Invalid review ID")
   })
 });
-var getLikesQuerySchema = z4.object({
-  query: z4.object({
-    reviewId: z4.string().uuid().optional(),
-    limit: z4.coerce.number().int().min(1).max(100).default(10),
-    page: z4.coerce.number().int().min(1).default(1)
+var getLikesQuerySchema = z5.object({
+  query: z5.object({
+    reviewId: z5.string().uuid().optional(),
+    limit: z5.coerce.number().int().min(1).max(100).default(10),
+    page: z5.coerce.number().int().min(1).default(1)
   })
 });
-var deleteLikeSchema = z4.object({
-  params: z4.object({
-    id: z4.string().uuid("Invalid like ID")
+var deleteLikeSchema = z5.object({
+  params: z5.object({
+    id: z5.string().uuid("Invalid like ID")
   })
 });
 
@@ -2677,28 +3239,28 @@ var WatchlistService = class {
 var watchlistService = new WatchlistService();
 
 // src/app/module/watchlist/watchlist.validation.ts
-import { z as z5 } from "zod";
-var addToWatchlistSchema = z5.object({
-  body: z5.object({
-    movieId: z5.string().uuid("Invalid movie ID")
+import { z as z6 } from "zod";
+var addToWatchlistSchema = z6.object({
+  body: z6.object({
+    movieId: z6.string().uuid("Invalid movie ID")
   })
 });
-var removeFromWatchlistSchema = z5.object({
-  params: z5.object({
-    id: z5.string().uuid("Invalid watchlist ID")
+var removeFromWatchlistSchema = z6.object({
+  params: z6.object({
+    id: z6.string().uuid("Invalid watchlist ID")
   })
 });
-var getWatchlistQuerySchema = z5.object({
-  query: z5.object({
-    limit: z5.coerce.number().int().min(1).max(100).default(10),
-    page: z5.coerce.number().int().min(1).default(1),
-    sortBy: z5.enum(["addedAt", "title"]).default("addedAt"),
-    order: z5.enum(["asc", "desc"]).default("desc")
+var getWatchlistQuerySchema = z6.object({
+  query: z6.object({
+    limit: z6.coerce.number().int().min(1).max(100).default(10),
+    page: z6.coerce.number().int().min(1).default(1),
+    sortBy: z6.enum(["addedAt", "title"]).default("addedAt"),
+    order: z6.enum(["asc", "desc"]).default("desc")
   })
 });
-var checkWatchlistSchema = z5.object({
-  query: z5.object({
-    movieId: z5.string().uuid("Invalid movie ID")
+var checkWatchlistSchema = z6.object({
+  query: z6.object({
+    movieId: z6.string().uuid("Invalid movie ID")
   })
 });
 
@@ -3123,6 +3685,11 @@ var PaymentService = class {
       console.error("[PaymentService] Subscription tier not found:", tierId);
       throw new AppError_default(404, "Subscription tier not found");
     }
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      console.error("[PaymentService] User not found:", userId);
+      throw new AppError_default(404, "User not found");
+    }
     const endDate = /* @__PURE__ */ new Date();
     if (interval === "yearly") {
       endDate.setFullYear(endDate.getFullYear() + 1);
@@ -3162,6 +3729,19 @@ var PaymentService = class {
         }
       })
     ]);
+    try {
+      await emailService.sendPaymentReceipt({
+        email: user.email,
+        name: user.name || "User",
+        amount: tier.price,
+        currency: tier.currency || "USD",
+        transactionId: session.id,
+        subscriptionTier: tier.displayName || tier.name,
+        billingDate: (/* @__PURE__ */ new Date()).toLocaleDateString()
+      });
+    } catch (error) {
+      console.error("[PaymentService] Failed to send invoice email:", error);
+    }
   }
   /**
    * Verify checkout session and fulfill subscription (fallback for webhook)
@@ -3301,38 +3881,38 @@ var PaymentService = class {
 var paymentService = new PaymentService();
 
 // src/app/module/payments/payments.validation.ts
-import { z as z6 } from "zod";
-var createPaymentIntentSchema = z6.object({
-  amount: z6.number().positive("Amount must be positive"),
-  currency: z6.string().default("usd"),
-  description: z6.string().optional()
+import { z as z7 } from "zod";
+var createPaymentIntentSchema = z7.object({
+  amount: z7.number().positive("Amount must be positive"),
+  currency: z7.string().default("usd"),
+  description: z7.string().optional()
 });
-var createPaymentSchema = z6.object({
-  paymentIntentId: z6.string(),
-  amount: z6.number().positive(),
-  currency: z6.string(),
-  method: z6.enum(["STRIPE", "SSLCOMMERZ", "WALLET"]),
-  description: z6.string().optional()
+var createPaymentSchema = z7.object({
+  paymentIntentId: z7.string(),
+  amount: z7.number().positive(),
+  currency: z7.string(),
+  method: z7.enum(["STRIPE", "SSLCOMMERZ", "WALLET"]),
+  description: z7.string().optional()
 });
-var getPaymentSchema = z6.object({
-  id: z6.string().uuid()
+var getPaymentSchema = z7.object({
+  id: z7.string().uuid()
 });
-var getPaymentsQuerySchema = z6.object({
-  limit: z6.coerce.number().int().min(1).max(100).default(10),
-  page: z6.coerce.number().int().min(1).default(1),
-  status: z6.enum(["PENDING", "COMPLETED", "FAILED", "REFUNDED"]).optional(),
-  sortBy: z6.enum(["createdAt", "amount"]).default("createdAt"),
-  order: z6.enum(["asc", "desc"]).default("desc")
+var getPaymentsQuerySchema = z7.object({
+  limit: z7.coerce.number().int().min(1).max(100).default(10),
+  page: z7.coerce.number().int().min(1).default(1),
+  status: z7.enum(["PENDING", "COMPLETED", "FAILED", "REFUNDED"]).optional(),
+  sortBy: z7.enum(["createdAt", "amount"]).default("createdAt"),
+  order: z7.enum(["asc", "desc"]).default("desc")
 });
-var handlePaymentWebhookSchema = z6.object({
-  type: z6.string(),
-  data: z6.object({
-    object: z6.object({
-      id: z6.string(),
-      status: z6.string(),
-      amount: z6.number(),
-      currency: z6.string(),
-      metadata: z6.record(z6.string(), z6.string()).optional()
+var handlePaymentWebhookSchema = z7.object({
+  type: z7.string(),
+  data: z7.object({
+    object: z7.object({
+      id: z7.string(),
+      status: z7.string(),
+      amount: z7.number(),
+      currency: z7.string(),
+      metadata: z7.record(z7.string(), z7.string()).optional()
     })
   })
 });
@@ -4090,57 +4670,57 @@ var SubscriptionService = class {
 var subscriptionService = new SubscriptionService();
 
 // src/app/module/subscriptions/subscriptions.validation.ts
-import { z as z7 } from "zod";
-var createSubscriptionSchema = z7.object({
-  subscriptionTierId: z7.string().uuid(),
-  paymentMethodId: z7.string().optional(),
-  autoRenew: z7.boolean().default(true)
+import { z as z8 } from "zod";
+var createSubscriptionSchema = z8.object({
+  subscriptionTierId: z8.string().uuid(),
+  paymentMethodId: z8.string().optional(),
+  autoRenew: z8.boolean().default(true)
 });
-var updateSubscriptionSchema = z7.object({
-  id: z7.string().uuid(),
-  autoRenew: z7.boolean().optional(),
-  subscriptionTierId: z7.string().uuid().optional()
+var updateSubscriptionSchema = z8.object({
+  id: z8.string().uuid(),
+  autoRenew: z8.boolean().optional(),
+  subscriptionTierId: z8.string().uuid().optional()
 });
-var cancelSubscriptionSchema = z7.object({
-  id: z7.string().uuid(),
-  reason: z7.string().optional()
+var cancelSubscriptionSchema = z8.object({
+  id: z8.string().uuid(),
+  reason: z8.string().optional()
 });
-var getSubscriptionSchema = z7.object({
-  id: z7.string().uuid()
+var getSubscriptionSchema = z8.object({
+  id: z8.string().uuid()
 });
-var getSubscriptionsQuerySchema = z7.object({
-  limit: z7.coerce.number().int().min(1).max(100).default(10),
-  page: z7.coerce.number().int().min(1).default(1),
-  status: z7.enum(["ACTIVE", "CANCELLED", "EXPIRED", "PAUSED"]).optional(),
-  sortBy: z7.enum(["createdAt", "renewalDate"]).default("createdAt"),
-  order: z7.enum(["asc", "desc"]).default("desc")
+var getSubscriptionsQuerySchema = z8.object({
+  limit: z8.coerce.number().int().min(1).max(100).default(10),
+  page: z8.coerce.number().int().min(1).default(1),
+  status: z8.enum(["ACTIVE", "CANCELLED", "EXPIRED", "PAUSED"]).optional(),
+  sortBy: z8.enum(["createdAt", "renewalDate"]).default("createdAt"),
+  order: z8.enum(["asc", "desc"]).default("desc")
 });
-var createSubscriptionTierSchema = z7.object({
-  name: z7.string().min(1, "Tier name is required"),
-  description: z7.string().optional(),
-  price: z7.number().positive("Price must be positive"),
-  billingCycle: z7.enum(["MONTHLY", "YEARLY"]),
-  features: z7.array(z7.string()).default([]),
-  maxConcurrentStreams: z7.number().int().positive().default(1),
-  maxDownloads: z7.number().int().positive().default(0),
-  isActive: z7.boolean().default(true)
+var createSubscriptionTierSchema = z8.object({
+  name: z8.string().min(1, "Tier name is required"),
+  description: z8.string().optional(),
+  price: z8.number().positive("Price must be positive"),
+  billingCycle: z8.enum(["MONTHLY", "YEARLY"]),
+  features: z8.array(z8.string()).default([]),
+  maxConcurrentStreams: z8.number().int().positive().default(1),
+  maxDownloads: z8.number().int().positive().default(0),
+  isActive: z8.boolean().default(true)
 });
-var updateSubscriptionTierSchema = z7.object({
-  id: z7.string().uuid(),
-  name: z7.string().min(1).optional(),
-  description: z7.string().optional(),
-  price: z7.number().positive().optional(),
-  features: z7.array(z7.string()).optional(),
-  maxConcurrentStreams: z7.number().int().positive().optional(),
-  maxDownloads: z7.number().int().positive().optional(),
-  isActive: z7.boolean().optional()
+var updateSubscriptionTierSchema = z8.object({
+  id: z8.string().uuid(),
+  name: z8.string().min(1).optional(),
+  description: z8.string().optional(),
+  price: z8.number().positive().optional(),
+  features: z8.array(z8.string()).optional(),
+  maxConcurrentStreams: z8.number().int().positive().optional(),
+  maxDownloads: z8.number().int().positive().optional(),
+  isActive: z8.boolean().optional()
 });
-var getSubscriptionTiersQuerySchema = z7.object({
-  limit: z7.coerce.number().int().min(1).max(100).default(10),
-  page: z7.coerce.number().int().min(1).default(1),
-  isActive: z7.coerce.boolean().optional(),
-  sortBy: z7.enum(["price", "createdAt"]).default("price"),
-  order: z7.enum(["asc", "desc"]).default("asc")
+var getSubscriptionTiersQuerySchema = z8.object({
+  limit: z8.coerce.number().int().min(1).max(100).default(10),
+  page: z8.coerce.number().int().min(1).default(1),
+  isActive: z8.coerce.boolean().optional(),
+  sortBy: z8.enum(["price", "createdAt"]).default("price"),
+  order: z8.enum(["asc", "desc"]).default("asc")
 });
 
 // src/app/module/subscriptions/subscriptions.controller.ts
@@ -4676,60 +5256,60 @@ var ModerationService = class {
 var moderationService = new ModerationService();
 
 // src/app/module/moderation/moderation.validation.ts
-import { z as z8 } from "zod";
-var approveReviewSchema = z8.object({
-  id: z8.string().uuid()
+import { z as z9 } from "zod";
+var approveReviewSchema = z9.object({
+  id: z9.string().uuid()
 });
-var rejectReviewSchema = z8.object({
-  id: z8.string().uuid(),
-  reason: z8.string().min(1, "Rejection reason is required")
+var rejectReviewSchema = z9.object({
+  id: z9.string().uuid(),
+  reason: z9.string().min(1, "Rejection reason is required")
 });
-var deleteCommentSchema2 = z8.object({
-  id: z8.string().uuid(),
-  reason: z8.string().optional()
+var deleteCommentSchema2 = z9.object({
+  id: z9.string().uuid(),
+  reason: z9.string().optional()
 });
-var suspendUserSchema = z8.object({
-  userId: z8.string().uuid(),
-  duration: z8.number().int().positive().optional(),
-  reason: z8.string().min(1, "Suspension reason is required")
+var suspendUserSchema = z9.object({
+  userId: z9.string().uuid(),
+  duration: z9.number().int().positive().optional(),
+  reason: z9.string().min(1, "Suspension reason is required")
 });
-var unsuspendUserSchema = z8.object({
-  userId: z8.string().uuid()
+var unsuspendUserSchema = z9.object({
+  userId: z9.string().uuid()
 });
-var getModerationQueueQuerySchema = z8.object({
-  limit: z8.coerce.number().int().min(1).max(100).default(20),
-  page: z8.coerce.number().int().min(1).default(1),
-  status: z8.enum(["PENDING", "APPROVED", "REJECTED"]).optional(),
-  type: z8.enum(["REVIEW", "COMMENT"]).optional(),
-  sortBy: z8.enum(["createdAt", "reportCount"]).default("createdAt"),
-  order: z8.enum(["asc", "desc"]).default("desc")
+var getModerationQueueQuerySchema = z9.object({
+  limit: z9.coerce.number().int().min(1).max(100).default(20),
+  page: z9.coerce.number().int().min(1).default(1),
+  status: z9.enum(["PENDING", "APPROVED", "REJECTED"]).optional(),
+  type: z9.enum(["REVIEW", "COMMENT"]).optional(),
+  sortBy: z9.enum(["createdAt", "reportCount"]).default("createdAt"),
+  order: z9.enum(["asc", "desc"]).default("desc")
 });
-var flagContentSchema = z8.object({
-  contentId: z8.string().uuid(),
-  contentType: z8.enum(["REVIEW", "COMMENT", "USER"]),
-  reason: z8.string().min(1, "Flag reason is required"),
-  description: z8.string().optional()
+var flagContentSchema = z9.object({
+  contentId: z9.string().uuid(),
+  contentType: z9.enum(["REVIEW", "COMMENT", "USER"]),
+  reason: z9.string().min(1, "Flag reason is required"),
+  description: z9.string().optional()
 });
-var getFlaggedContentQuerySchema = z8.object({
-  limit: z8.coerce.number().int().min(1).max(100).default(20),
-  page: z8.coerce.number().int().min(1).default(1),
-  contentType: z8.enum(["REVIEW", "COMMENT", "USER"]).optional(),
-  status: z8.enum(["PENDING", "RESOLVED"]).default("PENDING"),
-  sortBy: z8.enum(["createdAt", "flagCount"]).default("flagCount"),
-  order: z8.enum(["asc", "desc"]).default("desc")
+var getFlaggedContentQuerySchema = z9.object({
+  limit: z9.coerce.number().int().min(1).max(100).default(20),
+  page: z9.coerce.number().int().min(1).default(1),
+  contentType: z9.enum(["REVIEW", "COMMENT", "USER"]).optional(),
+  status: z9.enum(["PENDING", "RESOLVED"]).default("PENDING"),
+  sortBy: z9.enum(["createdAt", "flagCount"]).default("flagCount"),
+  order: z9.enum(["asc", "desc"]).default("desc")
 });
-var resolveFlagSchema = z8.object({
-  flagId: z8.string().uuid(),
-  action: z8.enum(["APPROVED", "DELETED", "WARNED"]),
-  notes: z8.string().optional()
+var resolveFlagSchema = z9.object({
+  flagId: z9.string().uuid(),
+  action: z9.enum(["APPROVED", "DELETED", "WARNED"]),
+  notes: z9.string().optional()
 });
-var getModerationHistoryQuerySchema = z8.object({
-  limit: z8.coerce.number().int().min(1).max(100).default(20),
-  page: z8.coerce.number().int().min(1).default(1),
-  userId: z8.string().uuid().optional(),
-  action: z8.enum(["APPROVED", "REJECTED", "DELETED", "SUSPENDED"]).optional(),
-  sortBy: z8.enum(["createdAt"]).default("createdAt"),
-  order: z8.enum(["asc", "desc"]).default("desc")
+var getModerationHistoryQuerySchema = z9.object({
+  limit: z9.coerce.number().int().min(1).max(100).default(20),
+  page: z9.coerce.number().int().min(1).default(1),
+  userId: z9.string().uuid().optional(),
+  action: z9.enum(["APPROVED", "REJECTED", "DELETED", "SUSPENDED"]).optional(),
+  sortBy: z9.enum(["createdAt"]).default("createdAt"),
+  order: z9.enum(["asc", "desc"]).default("desc")
 });
 
 // src/app/module/moderation/moderation.controller.ts
@@ -5361,28 +5941,28 @@ var AnalyticsService = class {
 var analyticsService = new AnalyticsService();
 
 // src/app/module/analytics/analytics.validation.ts
-import { z as z9 } from "zod";
-var getAnalyticsQuerySchema = z9.object({
-  startDate: z9.string().datetime().optional(),
-  endDate: z9.string().datetime().optional(),
-  period: z9.enum(["DAY", "WEEK", "MONTH", "YEAR"]).default("MONTH")
+import { z as z10 } from "zod";
+var getAnalyticsQuerySchema = z10.object({
+  startDate: z10.string().datetime().optional(),
+  endDate: z10.string().datetime().optional(),
+  period: z10.enum(["DAY", "WEEK", "MONTH", "YEAR"]).default("MONTH")
 });
-var getUserStatsQuerySchema = z9.object({
-  limit: z9.coerce.number().int().min(1).max(100).default(10),
-  page: z9.coerce.number().int().min(1).default(1),
-  sortBy: z9.enum(["createdAt", "reviewCount", "subscriptionStatus"]).default("createdAt"),
-  order: z9.enum(["asc", "desc"]).default("desc")
+var getUserStatsQuerySchema = z10.object({
+  limit: z10.coerce.number().int().min(1).max(100).default(10),
+  page: z10.coerce.number().int().min(1).default(1),
+  sortBy: z10.enum(["createdAt", "reviewCount", "subscriptionStatus"]).default("createdAt"),
+  order: z10.enum(["asc", "desc"]).default("desc")
 });
-var getMovieStatsQuerySchema = z9.object({
-  limit: z9.coerce.number().int().min(1).max(100).default(10),
-  page: z9.coerce.number().int().min(1).default(1),
-  sortBy: z9.enum(["rating", "reviewCount", "watchlistCount"]).default("rating"),
-  order: z9.enum(["asc", "desc"]).default("desc")
+var getMovieStatsQuerySchema = z10.object({
+  limit: z10.coerce.number().int().min(1).max(100).default(10),
+  page: z10.coerce.number().int().min(1).default(1),
+  sortBy: z10.enum(["rating", "reviewCount", "watchlistCount"]).default("rating"),
+  order: z10.enum(["asc", "desc"]).default("desc")
 });
-var getPaymentStatsQuerySchema = z9.object({
-  startDate: z9.string().datetime().optional(),
-  endDate: z9.string().datetime().optional(),
-  paymentMethod: z9.string().optional()
+var getPaymentStatsQuerySchema = z10.object({
+  startDate: z10.string().datetime().optional(),
+  endDate: z10.string().datetime().optional(),
+  paymentMethod: z10.string().optional()
 });
 
 // src/app/module/analytics/analytics.controller.ts
@@ -5789,37 +6369,37 @@ var AdminService = class {
 var adminService = new AdminService();
 
 // src/app/module/admin/admin.validation.ts
-import { z as z10 } from "zod";
-var updateUserRoleSchema = z10.object({
-  userId: z10.string().uuid(),
-  role: z10.enum(["USER", "ADMIN"])
+import { z as z11 } from "zod";
+var updateUserRoleSchema = z11.object({
+  userId: z11.string().uuid(),
+  role: z11.enum(["USER", "ADMIN"])
 });
-var updateUserStatusSchema = z10.object({
-  userId: z10.string().uuid(),
-  status: z10.enum(["ACTIVE", "BLOCKED", "DELETED"])
+var updateUserStatusSchema = z11.object({
+  userId: z11.string().uuid(),
+  status: z11.enum(["ACTIVE", "BLOCKED", "DELETED"])
 });
-var getUsersQuerySchema = z10.object({
-  limit: z10.coerce.number().int().min(1).max(100).default(20),
-  page: z10.coerce.number().int().min(1).default(1),
-  role: z10.enum(["USER", "ADMIN"]).optional(),
-  status: z10.enum(["ACTIVE", "BLOCKED", "DELETED"]).optional(),
-  sortBy: z10.enum(["createdAt", "name"]).default("createdAt"),
-  order: z10.enum(["asc", "desc"]).default("desc")
+var getUsersQuerySchema = z11.object({
+  limit: z11.coerce.number().int().min(1).max(100).default(20),
+  page: z11.coerce.number().int().min(1).default(1),
+  role: z11.enum(["USER", "ADMIN"]).optional(),
+  status: z11.enum(["ACTIVE", "BLOCKED", "DELETED"]).optional(),
+  sortBy: z11.enum(["createdAt", "name"]).default("createdAt"),
+  order: z11.enum(["asc", "desc"]).default("desc")
 });
-var getUserSchema = z10.object({
-  userId: z10.string().uuid()
+var getUserSchema = z11.object({
+  userId: z11.string().uuid()
 });
-var createAdminSchema = z10.object({
-  email: z10.string().email(),
-  name: z10.string().optional()
+var createAdminSchema = z11.object({
+  email: z11.string().email(),
+  name: z11.string().optional()
 });
-var updateUserSchema = z10.object({
-  userId: z10.string().uuid(),
-  name: z10.string().optional()
+var updateUserSchema = z11.object({
+  userId: z11.string().uuid(),
+  name: z11.string().optional()
 });
-var deleteUserSchema = z10.object({
-  userId: z10.string().uuid(),
-  reason: z10.string().optional()
+var deleteUserSchema = z11.object({
+  userId: z11.string().uuid(),
+  reason: z11.string().optional()
 });
 
 // src/app/module/admin/admin.controller.ts
@@ -6033,17 +6613,17 @@ var UserProfileService = class {
 var userProfileService = new UserProfileService();
 
 // src/app/module/user-profile/user-profile.validation.ts
-import { z as z11 } from "zod";
-var updateProfileSchema = z11.object({
-  body: z11.object({
-    name: z11.string().min(1).max(120).optional(),
-    image: z11.string().refine(
+import { z as z12 } from "zod";
+var updateProfileSchema = z12.object({
+  body: z12.object({
+    name: z12.string().min(1).max(120).optional(),
+    image: z12.string().refine(
       (value) => value === "" || value.startsWith("data:image/") || /^https?:\/\//.test(value),
       "Invalid image format"
     ).optional(),
-    phone: z11.string().min(5).max(30).optional().or(z11.literal("")),
-    gender: z11.enum(["Male", "Female", "Other"]).optional().or(z11.literal("")),
-    dateOfBirth: z11.string().optional().or(z11.literal(""))
+    phone: z12.string().min(5).max(30).optional().or(z12.literal("")),
+    gender: z12.enum(["Male", "Female", "Other"]).optional().or(z12.literal("")),
+    dateOfBirth: z12.string().optional().or(z12.literal(""))
   })
 });
 
@@ -6094,7 +6674,7 @@ var IndexRoutes = router13;
 
 // src/app/middleware/globalErrorHandler.ts
 import status6 from "http-status";
-import z12 from "zod";
+import z13 from "zod";
 
 // src/app/errorHelpers/handleZodError.ts
 import status5 from "http-status";
@@ -6125,7 +6705,7 @@ var globalErrorHandler = async (err, req, res, next) => {
   let statusCode = status6.INTERNAL_SERVER_ERROR;
   let message = "Internal Server Error";
   let stack = void 0;
-  if (err instanceof z12.ZodError) {
+  if (err instanceof z13.ZodError) {
     const simplifiedError = handleZodError(err);
     statusCode = simplifiedError.statusCode;
     message = simplifiedError.message;

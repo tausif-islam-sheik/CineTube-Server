@@ -21,14 +21,14 @@ const register = catchAsync(async (req: Request, res: Response) => {
 
 const logIn = catchAsync(async (req: Request, res: Response) => {
   const payload = req.body;
-  const result = await AuthService.logIn(payload);
+  const result = await AuthService.logIn(payload, res);
 
   // Set access token cookie (short-lived - 15 minutes)
   CookieUtils.setCookie(res, "accessToken", result.accessToken, {
     maxAge: 15 * 60 * 1000, // 15 minutes
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
   });
 
   // Set refresh token cookie (long-lived - 7 days)
@@ -36,7 +36,7 @@ const logIn = catchAsync(async (req: Request, res: Response) => {
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
   });
 
   sendResponse(res, {
@@ -61,7 +61,7 @@ const refresh = catchAsync(async (req: Request, res: Response) => {
     maxAge: 15 * 60 * 1000, // 15 minutes
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
   });
 
   sendResponse(res, {

@@ -53,33 +53,35 @@ const register = async (payload: IRegisterUserPayload) => {
   }
 };
 
-const logIn = async (payload: ILoginUserPayload) => {
+const logIn = async (payload: ILoginUserPayload, expressRes: Response) => {
   const { email, password } = payload;
 
-  // Get credential account with user
-  const credentialAccount = await prisma.account.findFirst({
-    where: {
-      providerId: "credential",
-      user: { email },
-    },
-    include: { user: true },
+  // Get full Response object so we can extract Set-Cookie
+  const authResponse = await auth.api.signInEmail({
+    body: { email, password },
+    asResponse: true, 
   });
 
-  if (!credentialAccount) {
+  if (!authResponse.ok) {
     throw new AppError(status.UNAUTHORIZED, "Invalid email or password");
   }
 
-  // Manually verify password using bcrypt
-  const bcrypt = await import("bcryptjs");
-  const isPasswordValid = bcrypt.compareSync(password, credentialAccount.password || "");
-
-  if (!isPasswordValid) {
-    throw new AppError(status.UNAUTHORIZED, "Invalid email or password");
+  // Forward Better Auth cookies to the browser
+  const setCookie = authResponse.headers.get("set-cookie");
+  if (setCookie) {
+    expressRes.setHeader("Set-Cookie", setCookie);
   }
 
-  const user = credentialAccount.user;
+  const authData = await authResponse.json();
+  const user = await prisma.user.findUnique({
+    where: { id: authData.user.id },
+  });
 
-  if (user.status === UserStatus.BLOCKED) {
+  if (!user) {
+    throw new AppError(status.NOT_FOUND, "User not found");
+  }
+
+  if ((user as any).status === UserStatus.BLOCKED) {
     throw new AppError(status.FORBIDDEN, "User is blocked");
   }
 
@@ -87,13 +89,6 @@ const logIn = async (payload: ILoginUserPayload) => {
     throw new AppError(status.NOT_FOUND, "User is deleted");
   }
 
-  // Get the session token from database
-  const latestSession = await prisma.session.findFirst({
-    where: { userId: user.id },
-    orderBy: { createdAt: "desc" },
-  });
-
-  // Generate JWT tokens
   const { accessToken, refreshToken } = jwtUtils.generateTokenPair(
     {
       userId: user.id,
@@ -103,6 +98,11 @@ const logIn = async (payload: ILoginUserPayload) => {
     env.ACCESS_TOKEN_SECRET,
     env.REFRESH_TOKEN_SECRET
   );
+
+  const latestSession = await prisma.session.findFirst({
+    where: { userId: user.id },
+    orderBy: { createdAt: "desc" },
+  });
 
   return {
     user: {
