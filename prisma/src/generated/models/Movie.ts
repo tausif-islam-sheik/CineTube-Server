@@ -52,6 +52,7 @@ export type MovieMinAggregateOutputType = {
   price: number | null
   youtubeLink: string | null
   posterUrl: string | null
+  backdropUrl: string | null
   trailerUrl: string | null
   duration: number | null
   averageRating: number | null
@@ -73,6 +74,7 @@ export type MovieMaxAggregateOutputType = {
   price: number | null
   youtubeLink: string | null
   posterUrl: string | null
+  backdropUrl: string | null
   trailerUrl: string | null
   duration: number | null
   averageRating: number | null
@@ -97,6 +99,7 @@ export type MovieCountAggregateOutputType = {
   price: number
   youtubeLink: number
   posterUrl: number
+  backdropUrl: number
   trailerUrl: number
   duration: number
   averageRating: number
@@ -134,6 +137,7 @@ export type MovieMinAggregateInputType = {
   price?: true
   youtubeLink?: true
   posterUrl?: true
+  backdropUrl?: true
   trailerUrl?: true
   duration?: true
   averageRating?: true
@@ -155,6 +159,7 @@ export type MovieMaxAggregateInputType = {
   price?: true
   youtubeLink?: true
   posterUrl?: true
+  backdropUrl?: true
   trailerUrl?: true
   duration?: true
   averageRating?: true
@@ -179,6 +184,7 @@ export type MovieCountAggregateInputType = {
   price?: true
   youtubeLink?: true
   posterUrl?: true
+  backdropUrl?: true
   trailerUrl?: true
   duration?: true
   averageRating?: true
@@ -290,6 +296,7 @@ export type MovieGroupByOutputType = {
   price: number | null
   youtubeLink: string | null
   posterUrl: string | null
+  backdropUrl: string | null
   trailerUrl: string | null
   duration: number | null
   averageRating: number | null
@@ -337,6 +344,7 @@ export type MovieWhereInput = {
   price?: Prisma.FloatNullableFilter<"Movie"> | number | null
   youtubeLink?: Prisma.StringNullableFilter<"Movie"> | string | null
   posterUrl?: Prisma.StringNullableFilter<"Movie"> | string | null
+  backdropUrl?: Prisma.StringNullableFilter<"Movie"> | string | null
   trailerUrl?: Prisma.StringNullableFilter<"Movie"> | string | null
   duration?: Prisma.IntNullableFilter<"Movie"> | number | null
   averageRating?: Prisma.FloatNullableFilter<"Movie"> | number | null
@@ -364,6 +372,7 @@ export type MovieOrderByWithRelationInput = {
   price?: Prisma.SortOrderInput | Prisma.SortOrder
   youtubeLink?: Prisma.SortOrderInput | Prisma.SortOrder
   posterUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  backdropUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   trailerUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   duration?: Prisma.SortOrderInput | Prisma.SortOrder
   averageRating?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -394,6 +403,7 @@ export type MovieWhereUniqueInput = Prisma.AtLeast<{
   price?: Prisma.FloatNullableFilter<"Movie"> | number | null
   youtubeLink?: Prisma.StringNullableFilter<"Movie"> | string | null
   posterUrl?: Prisma.StringNullableFilter<"Movie"> | string | null
+  backdropUrl?: Prisma.StringNullableFilter<"Movie"> | string | null
   trailerUrl?: Prisma.StringNullableFilter<"Movie"> | string | null
   duration?: Prisma.IntNullableFilter<"Movie"> | number | null
   averageRating?: Prisma.FloatNullableFilter<"Movie"> | number | null
@@ -421,6 +431,7 @@ export type MovieOrderByWithAggregationInput = {
   price?: Prisma.SortOrderInput | Prisma.SortOrder
   youtubeLink?: Prisma.SortOrderInput | Prisma.SortOrder
   posterUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  backdropUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   trailerUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   duration?: Prisma.SortOrderInput | Prisma.SortOrder
   averageRating?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -453,6 +464,7 @@ export type MovieScalarWhereWithAggregatesInput = {
   price?: Prisma.FloatNullableWithAggregatesFilter<"Movie"> | number | null
   youtubeLink?: Prisma.StringNullableWithAggregatesFilter<"Movie"> | string | null
   posterUrl?: Prisma.StringNullableWithAggregatesFilter<"Movie"> | string | null
+  backdropUrl?: Prisma.StringNullableWithAggregatesFilter<"Movie"> | string | null
   trailerUrl?: Prisma.StringNullableWithAggregatesFilter<"Movie"> | string | null
   duration?: Prisma.IntNullableWithAggregatesFilter<"Movie"> | number | null
   averageRating?: Prisma.FloatNullableWithAggregatesFilter<"Movie"> | number | null
@@ -477,6 +489,7 @@ export type MovieCreateInput = {
   price?: number | null
   youtubeLink?: string | null
   posterUrl?: string | null
+  backdropUrl?: string | null
   trailerUrl?: string | null
   duration?: number | null
   averageRating?: number | null
@@ -504,6 +517,7 @@ export type MovieUncheckedCreateInput = {
   price?: number | null
   youtubeLink?: string | null
   posterUrl?: string | null
+  backdropUrl?: string | null
   trailerUrl?: string | null
   duration?: number | null
   averageRating?: number | null
@@ -531,6 +545,7 @@ export type MovieUpdateInput = {
   price?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   youtubeLink?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   posterUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  backdropUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   trailerUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   duration?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   averageRating?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -558,6 +573,7 @@ export type MovieUncheckedUpdateInput = {
   price?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   youtubeLink?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   posterUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  backdropUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   trailerUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   duration?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   averageRating?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -585,6 +601,7 @@ export type MovieCreateManyInput = {
   price?: number | null
   youtubeLink?: string | null
   posterUrl?: string | null
+  backdropUrl?: string | null
   trailerUrl?: string | null
   duration?: number | null
   averageRating?: number | null
@@ -609,6 +626,7 @@ export type MovieUpdateManyMutationInput = {
   price?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   youtubeLink?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   posterUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  backdropUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   trailerUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   duration?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   averageRating?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -633,6 +651,7 @@ export type MovieUncheckedUpdateManyInput = {
   price?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   youtubeLink?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   posterUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  backdropUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   trailerUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   duration?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   averageRating?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -670,6 +689,7 @@ export type MovieCountOrderByAggregateInput = {
   price?: Prisma.SortOrder
   youtubeLink?: Prisma.SortOrder
   posterUrl?: Prisma.SortOrder
+  backdropUrl?: Prisma.SortOrder
   trailerUrl?: Prisma.SortOrder
   duration?: Prisma.SortOrder
   averageRating?: Prisma.SortOrder
@@ -698,6 +718,7 @@ export type MovieMaxOrderByAggregateInput = {
   price?: Prisma.SortOrder
   youtubeLink?: Prisma.SortOrder
   posterUrl?: Prisma.SortOrder
+  backdropUrl?: Prisma.SortOrder
   trailerUrl?: Prisma.SortOrder
   duration?: Prisma.SortOrder
   averageRating?: Prisma.SortOrder
@@ -719,6 +740,7 @@ export type MovieMinOrderByAggregateInput = {
   price?: Prisma.SortOrder
   youtubeLink?: Prisma.SortOrder
   posterUrl?: Prisma.SortOrder
+  backdropUrl?: Prisma.SortOrder
   trailerUrl?: Prisma.SortOrder
   duration?: Prisma.SortOrder
   averageRating?: Prisma.SortOrder
@@ -847,6 +869,7 @@ export type MovieCreateWithoutContentAccessInput = {
   price?: number | null
   youtubeLink?: string | null
   posterUrl?: string | null
+  backdropUrl?: string | null
   trailerUrl?: string | null
   duration?: number | null
   averageRating?: number | null
@@ -873,6 +896,7 @@ export type MovieUncheckedCreateWithoutContentAccessInput = {
   price?: number | null
   youtubeLink?: string | null
   posterUrl?: string | null
+  backdropUrl?: string | null
   trailerUrl?: string | null
   duration?: number | null
   averageRating?: number | null
@@ -915,6 +939,7 @@ export type MovieUpdateWithoutContentAccessInput = {
   price?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   youtubeLink?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   posterUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  backdropUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   trailerUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   duration?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   averageRating?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -941,6 +966,7 @@ export type MovieUncheckedUpdateWithoutContentAccessInput = {
   price?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   youtubeLink?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   posterUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  backdropUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   trailerUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   duration?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   averageRating?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -967,6 +993,7 @@ export type MovieCreateWithoutReviewsInput = {
   price?: number | null
   youtubeLink?: string | null
   posterUrl?: string | null
+  backdropUrl?: string | null
   trailerUrl?: string | null
   duration?: number | null
   averageRating?: number | null
@@ -993,6 +1020,7 @@ export type MovieUncheckedCreateWithoutReviewsInput = {
   price?: number | null
   youtubeLink?: string | null
   posterUrl?: string | null
+  backdropUrl?: string | null
   trailerUrl?: string | null
   duration?: number | null
   averageRating?: number | null
@@ -1035,6 +1063,7 @@ export type MovieUpdateWithoutReviewsInput = {
   price?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   youtubeLink?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   posterUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  backdropUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   trailerUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   duration?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   averageRating?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -1061,6 +1090,7 @@ export type MovieUncheckedUpdateWithoutReviewsInput = {
   price?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   youtubeLink?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   posterUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  backdropUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   trailerUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   duration?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   averageRating?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -1087,6 +1117,7 @@ export type MovieCreateWithoutWatchlistsInput = {
   price?: number | null
   youtubeLink?: string | null
   posterUrl?: string | null
+  backdropUrl?: string | null
   trailerUrl?: string | null
   duration?: number | null
   averageRating?: number | null
@@ -1113,6 +1144,7 @@ export type MovieUncheckedCreateWithoutWatchlistsInput = {
   price?: number | null
   youtubeLink?: string | null
   posterUrl?: string | null
+  backdropUrl?: string | null
   trailerUrl?: string | null
   duration?: number | null
   averageRating?: number | null
@@ -1155,6 +1187,7 @@ export type MovieUpdateWithoutWatchlistsInput = {
   price?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   youtubeLink?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   posterUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  backdropUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   trailerUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   duration?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   averageRating?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -1181,6 +1214,7 @@ export type MovieUncheckedUpdateWithoutWatchlistsInput = {
   price?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   youtubeLink?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   posterUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  backdropUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   trailerUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   duration?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   averageRating?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -1256,6 +1290,7 @@ export type MovieSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   price?: boolean
   youtubeLink?: boolean
   posterUrl?: boolean
+  backdropUrl?: boolean
   trailerUrl?: boolean
   duration?: boolean
   averageRating?: boolean
@@ -1284,6 +1319,7 @@ export type MovieSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   price?: boolean
   youtubeLink?: boolean
   posterUrl?: boolean
+  backdropUrl?: boolean
   trailerUrl?: boolean
   duration?: boolean
   averageRating?: boolean
@@ -1308,6 +1344,7 @@ export type MovieSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   price?: boolean
   youtubeLink?: boolean
   posterUrl?: boolean
+  backdropUrl?: boolean
   trailerUrl?: boolean
   duration?: boolean
   averageRating?: boolean
@@ -1332,6 +1369,7 @@ export type MovieSelectScalar = {
   price?: boolean
   youtubeLink?: boolean
   posterUrl?: boolean
+  backdropUrl?: boolean
   trailerUrl?: boolean
   duration?: boolean
   averageRating?: boolean
@@ -1341,7 +1379,7 @@ export type MovieSelectScalar = {
   isDeleted?: boolean
 }
 
-export type MovieOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "title" | "slug" | "description" | "genre" | "releaseYear" | "director" | "cast" | "platform" | "language" | "pricing" | "price" | "youtubeLink" | "posterUrl" | "trailerUrl" | "duration" | "averageRating" | "createdAt" | "updatedAt" | "deletedAt" | "isDeleted", ExtArgs["result"]["movie"]>
+export type MovieOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "title" | "slug" | "description" | "genre" | "releaseYear" | "director" | "cast" | "platform" | "language" | "pricing" | "price" | "youtubeLink" | "posterUrl" | "backdropUrl" | "trailerUrl" | "duration" | "averageRating" | "createdAt" | "updatedAt" | "deletedAt" | "isDeleted", ExtArgs["result"]["movie"]>
 export type MovieInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   reviews?: boolean | Prisma.Movie$reviewsArgs<ExtArgs>
   watchlists?: boolean | Prisma.Movie$watchlistsArgs<ExtArgs>
@@ -1373,6 +1411,7 @@ export type $MoviePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     price: number | null
     youtubeLink: string | null
     posterUrl: string | null
+    backdropUrl: string | null
     trailerUrl: string | null
     duration: number | null
     averageRating: number | null
@@ -1820,6 +1859,7 @@ export interface MovieFieldRefs {
   readonly price: Prisma.FieldRef<"Movie", 'Float'>
   readonly youtubeLink: Prisma.FieldRef<"Movie", 'String'>
   readonly posterUrl: Prisma.FieldRef<"Movie", 'String'>
+  readonly backdropUrl: Prisma.FieldRef<"Movie", 'String'>
   readonly trailerUrl: Prisma.FieldRef<"Movie", 'String'>
   readonly duration: Prisma.FieldRef<"Movie", 'Int'>
   readonly averageRating: Prisma.FieldRef<"Movie", 'Float'>

@@ -14,6 +14,7 @@ model Movie {
   price         Float?
   youtubeLink   String?       @map("youtube_link")
   posterUrl     String?       @map("poster_url")
+  backdropUrl   String?       @map("backdrop_url")
   trailerUrl    String?       @map("trailer_url")
   duration      Int?          // in minutes
   

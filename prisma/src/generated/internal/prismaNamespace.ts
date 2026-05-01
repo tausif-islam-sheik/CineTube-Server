@@ -1532,6 +1532,7 @@ export const MovieScalarFieldEnum = {
   price: 'price',
   youtubeLink: 'youtubeLink',
   posterUrl: 'posterUrl',
+  backdropUrl: 'backdropUrl',
   trailerUrl: 'trailerUrl',
   duration: 'duration',
   averageRating: 'averageRating',
