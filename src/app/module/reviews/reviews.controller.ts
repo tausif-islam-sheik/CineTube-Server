@@ -57,13 +57,24 @@ export class ReviewsController {
    */
   static getMyReviews = catchAsync(async (req: any, res: Response) => {
     const userId = req.user.id;
-    const result = await reviewsService.getMyReviews(userId);
+    const { limit = 10, page = 1 } = req.query;
+    const result = await reviewsService.getMyReviews(
+      userId,
+      parseInt(limit as string),
+      parseInt(page as string)
+    );
 
     sendResponse(res, {
       httpStatusCode: 200,
       success: true,
       message: 'User reviews retrieved successfully',
-      data: result,
+      data: result.data,
+      meta: {
+        page: result.pagination.page,
+        limit: result.pagination.limit,
+        total: result.pagination.total,
+        totalPages: result.pagination.pages,
+      },
     });
   });
 

@@ -175,33 +175,56 @@ export class ReviewsService implements IReviewsService {
   }
 
   /**
-   * Get current user's reviews
+   * Get current user's reviews with pagination
    */
-  async getMyReviews(userId: string): Promise<any[]> {
+  async getMyReviews(userId: string, limit: number = 10, page: number = 1): Promise<any> {
     try {
-      const reviews = await prisma.review.findMany({
-        where: { userId },
-        orderBy: { createdAt: 'desc' },
-        include: {
-          movie: {
-            select: {
-              id: true,
-              title: true,
-              slug: true,
-              posterUrl: true,
-              releaseYear: true,
-              genre: true,
-            },
-          },
-          _count: {
-            select: {
-              likes: true,
-            },
-          },
-        },
-      });
+      const skip = (page - 1) * limit;
 
-      return reviews;
+      const [reviews, total] = await Promise.all([
+        prisma.review.findMany({
+          where: { userId },
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit,
+          include: {
+            movie: {
+              select: {
+                id: true,
+                title: true,
+                slug: true,
+                posterUrl: true,
+                releaseYear: true,
+                genre: true,
+              },
+            },
+            _count: {
+              select: {
+                likes: true,
+              },
+            },
+          },
+        }),
+        prisma.review.count({ where: { userId } }),
+      ]);
+
+      // Map content to comment for frontend compatibility
+      const mappedReviews = reviews.map((review: any) => ({
+        ...review,
+        comment: review.content,
+      }));
+
+      const totalPages = Math.ceil(total / limit);
+
+      return {
+        data: mappedReviews,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: totalPages,
+        },
+      };
     } catch (error) {
       throw new AppError(500, 'Failed to fetch user reviews');
     }
