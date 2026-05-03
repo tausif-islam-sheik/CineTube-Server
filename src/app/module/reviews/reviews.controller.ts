@@ -53,6 +53,21 @@ export class ReviewsController {
   });
 
   /**
+   * Get current user's reviews
+   */
+  static getMyReviews = catchAsync(async (req: any, res: Response) => {
+    const userId = req.user.id;
+    const result = await reviewsService.getMyReviews(userId);
+
+    sendResponse(res, {
+      httpStatusCode: 200,
+      success: true,
+      message: 'User reviews retrieved successfully',
+      data: result,
+    });
+  });
+
+  /**
    * Get a single review by ID
    */
   static getReviewById = catchAsync(async (req: any, res: Response) => {

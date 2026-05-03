@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export interface PaginatedResult<T> {
   data: T[];
   pagination: {
@@ -11,6 +12,7 @@ export interface PaginatedResult<T> {
 export interface IReviewsService {
   createReview(userId: string, data: any): Promise<any>;
   getReviews(filters: any): Promise<PaginatedResult<any>>;
+  getMyReviews(userId: string): Promise<any[]>;
   getReviewById(id: string): Promise<any | null>;
   updateReview(id: string, userId: string, data: any): Promise<any>;
   deleteReview(id: string, userId: string): Promise<any>;

@@ -175,6 +175,39 @@ export class ReviewsService implements IReviewsService {
   }
 
   /**
+   * Get current user's reviews
+   */
+  async getMyReviews(userId: string): Promise<any[]> {
+    try {
+      const reviews = await prisma.review.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          movie: {
+            select: {
+              id: true,
+              title: true,
+              slug: true,
+              posterUrl: true,
+              releaseYear: true,
+              genre: true,
+            },
+          },
+          _count: {
+            select: {
+              likes: true,
+            },
+          },
+        },
+      });
+
+      return reviews;
+    } catch (error) {
+      throw new AppError(500, 'Failed to fetch user reviews');
+    }
+  }
+
+  /**
    * Get a single review by ID
    */
   async getReviewById(id: string): Promise<any | null> {
