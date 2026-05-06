@@ -302,6 +302,6 @@ This project is licensed under the [ISC License](LICENSE).
 
 <div align="center">
 
-Made with ❤️ by [Tausif Islam Sheik](https://github.com/tausif-islam-sheik)
+Made with ❤️ by [Tausif Islam Sheik](https://www.linkedin.com/in/tausif-islam-sheik)
 
 </div>
