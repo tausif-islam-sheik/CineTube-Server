@@ -1,4 +1,5 @@
 import { seedAdmin } from "./app/utils/adminSeed";
+import { seedDemoUser } from "./app/utils/demoSeed";
 import { prisma } from "./app/lib/prisma";
 
 const main = async () => {
@@ -6,6 +7,7 @@ const main = async () => {
   
   try {
     await seedAdmin();
+    await seedDemoUser();
     console.log("✅ Seeding completed successfully");
   } catch (error) {
     console.error("❌ Seeding failed:", error);

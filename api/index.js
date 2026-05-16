@@ -2192,6 +2192,56 @@ var ReviewsService = class {
     }
   }
   /**
+   * Get current user's reviews with pagination
+   */
+  async getMyReviews(userId, limit = 10, page = 1) {
+    try {
+      const skip = (page - 1) * limit;
+      const [reviews, total] = await Promise.all([
+        prisma.review.findMany({
+          where: { userId },
+          orderBy: { createdAt: "desc" },
+          skip,
+          take: limit,
+          include: {
+            movie: {
+              select: {
+                id: true,
+                title: true,
+                slug: true,
+                posterUrl: true,
+                releaseYear: true,
+                genre: true
+              }
+            },
+            _count: {
+              select: {
+                likes: true
+              }
+            }
+          }
+        }),
+        prisma.review.count({ where: { userId } })
+      ]);
+      const mappedReviews = reviews.map((review) => ({
+        ...review,
+        comment: review.content
+      }));
+      const totalPages = Math.ceil(total / limit);
+      return {
+        data: mappedReviews,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: totalPages
+        }
+      };
+    } catch (error) {
+      throw new AppError_default(500, "Failed to fetch user reviews");
+    }
+  }
+  /**
    * Get a single review by ID
    */
   async getReviewById(id) {
@@ -2433,6 +2483,30 @@ var ReviewsController = class {
     });
   });
   /**
+   * Get current user's reviews
+   */
+  static getMyReviews = catchAsync(async (req, res) => {
+    const userId = req.user.id;
+    const { limit = 10, page = 1 } = req.query;
+    const result = await reviewsService.getMyReviews(
+      userId,
+      parseInt(limit),
+      parseInt(page)
+    );
+    sendResponse(res, {
+      httpStatusCode: 200,
+      success: true,
+      message: "User reviews retrieved successfully",
+      data: result.data,
+      meta: {
+        page: result.pagination.page,
+        limit: result.pagination.limit,
+        total: result.pagination.total,
+        totalPages: result.pagination.pages
+      }
+    });
+  });
+  /**
    * Get a single review by ID
    */
   static getReviewById = catchAsync(async (req, res) => {
@@ -2508,8 +2582,9 @@ var ReviewsController = class {
 // src/app/module/reviews/reviews.route.ts
 var router3 = Router3();
 router3.get("/reviews", ReviewsController.getReviews);
-router3.get("/reviews/:id", ReviewsController.getReviewById);
 router3.get("/movies/:movieId/reviews", ReviewsController.getMovieReviews);
+router3.get("/reviews/my", requireAuth, ReviewsController.getMyReviews);
+router3.get("/reviews/:id", ReviewsController.getReviewById);
 router3.post("/reviews", requireAuth, ReviewsController.createReview);
 router3.patch("/reviews/:id", requireAuth, ReviewsController.updateReview);
 router3.delete("/reviews/:id", requireAuth, ReviewsController.deleteReview);
